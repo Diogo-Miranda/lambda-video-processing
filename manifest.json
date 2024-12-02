@@ -1,6 +1,6 @@
 {
     "videoConfig": {
-        "name": "name",
+        "name": "cao_video_1733025387543",
         "trackOrder": [
             "initial",
             "template",
@@ -12,87 +12,200 @@
             "template",
             "card",
             "template",
-            "card",
             "final"
-        ]
+        ],
+        "uploadedResources": {
+            "bucketKey": "s3://retrospet-photos-users/test"
+        }
     },
     "static": {
         "initial": {
             "refId": "initial",
-            "quantity": 1,
+            "quantity": 2,
             "clips": [
                 {
-                    "link": "clipLink",
-                    "type": "clipType",
+                    "link": "static/initial/capa.mp4",
+                    "type": "video",
                     "metadata": {
-                        "key1": "value1",
-                        "keyN": "valueN"
+                        "petType": "cao",
+                        "clipType": "initial"
+                    }
+                },
+                {
+                    "link": "static/initial/nome_pet_e_dono.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "petType": "cao",
+                        "clipType": "initial"
                     }
                 }
             ],
-            "ordened": true
+            "ordened": 1
         },
         "cards": {
             "refId": "card",
-            "quantity": 1,
+            "quantity": 5,
             "clips": [
                 {
-                    "link": "clipLink",
-                    "type": "clipType",
+                    "link": "static/cartelas/cao/VerdeEscuro-08.mp4",
+                    "type": "video",
                     "metadata": {
-                        "key1": "value1",
-                        "keyN": "valueN"
+                        "petType": "cao",
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeEscuro-07.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "petType": "cao",
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeClaro-03.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "petType": "cao",
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeClaro-01.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "petType": "cao",
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeMedio-06.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "petType": "cao",
+                        "clipType": "card"
                     }
                 }
             ],
-            "ordened": false
+            "ordened": 0
         },
         "templates": {
             "refId": "template",
-            "quantity": 1,
+            "quantity": 5,
             "clips": [
                 {
-                    "link": "clipLink",
-                    "type": "clipType",
+                    "link": "static/templates/FundoFotoVerdeClaro-02.mp4",
+                    "type": "video",
                     "metadata": {
-                        "key1": "value1",
-                        "keyN": "valueN"
+                        "petType": "cao",
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 800,
+                            "height": 1060,
+                            "rotation": 2.2,
+                            "x": 129,
+                            "y": 369
+                        },
+                        "initialTimestamp": 6
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeMedio-04.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "petType": "cao",
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 900,
+                            "rotation": 1.5,
+                            "x": 96,
+                            "y": 426
+                        },
+                        "initialTimestamp": 15
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeMedio-03.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "petType": "cao",
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 720,
+                            "rotation": 3,
+                            "x": 98,
+                            "y": 560
+                        },
+                        "initialTimestamp": 24
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeClaro-03.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "petType": "cao",
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 720,
+                            "rotation": 3,
+                            "x": 98,
+                            "y": 560
+                        },
+                        "initialTimestamp": 30
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeEscuro-02.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "petType": "cao",
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 800,
+                            "height": 1060,
+                            "rotation": 2.2,
+                            "x": 129,
+                            "y": 369
+                        },
+                        "initialTimestamp": 39
                     }
                 }
             ],
-            "ordened": false
+            "ordened": 0
         },
         "final": {
             "refId": "final",
-            "quantity": 1,
+            "quantity": 3,
             "clips": [
                 {
-                    "link": "clipLink",
-                    "type": "clipType",
+                    "link": "static/final/final_step_1.mp4",
+                    "type": "video",
                     "metadata": {
-                        "key1": "value1",
-                        "keyN": "valueN"
+                        "petType": "cao",
+                        "clipType": "final"
+                    }
+                },
+                {
+                    "link": "static/final/final_step_2.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "petType": "cao",
+                        "clipType": "final"
+                    }
+                },
+                {
+                    "link": "static/final/final_step_3.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "petType": "cao",
+                        "clipType": "final"
                     }
                 }
             ],
-            "ordened": true
-        }
-    },
-    "dynamic": {
-        "resources": {
-            "refId": "resources",
-            "quantity": 1,
-            "clips": [
-                {
-                    "link": "clipLink",
-                    "type": "clipType",
-                    "metadata": {
-                        "key1": "value1",
-                        "keyN": "valueN"
-                    }
-                }
-            ],
-            "ordened": false
+            "ordened": 1
         }
     }
 }
