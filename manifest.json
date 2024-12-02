@@ -1,0 +1,98 @@
+{
+    "videoConfig": {
+        "name": "name",
+        "trackOrder": [
+            "initial",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "final"
+        ]
+    },
+    "static": {
+        "initial": {
+            "refId": "initial",
+            "quantity": 1,
+            "clips": [
+                {
+                    "link": "clipLink",
+                    "type": "clipType",
+                    "metadata": {
+                        "key1": "value1",
+                        "keyN": "valueN"
+                    }
+                }
+            ],
+            "ordened": true
+        },
+        "cards": {
+            "refId": "card",
+            "quantity": 1,
+            "clips": [
+                {
+                    "link": "clipLink",
+                    "type": "clipType",
+                    "metadata": {
+                        "key1": "value1",
+                        "keyN": "valueN"
+                    }
+                }
+            ],
+            "ordened": false
+        },
+        "templates": {
+            "refId": "template",
+            "quantity": 1,
+            "clips": [
+                {
+                    "link": "clipLink",
+                    "type": "clipType",
+                    "metadata": {
+                        "key1": "value1",
+                        "keyN": "valueN"
+                    }
+                }
+            ],
+            "ordened": false
+        },
+        "final": {
+            "refId": "final",
+            "quantity": 1,
+            "clips": [
+                {
+                    "link": "clipLink",
+                    "type": "clipType",
+                    "metadata": {
+                        "key1": "value1",
+                        "keyN": "valueN"
+                    }
+                }
+            ],
+            "ordened": true
+        }
+    },
+    "dynamic": {
+        "resources": {
+            "refId": "resources",
+            "quantity": 1,
+            "clips": [
+                {
+                    "link": "clipLink",
+                    "type": "clipType",
+                    "metadata": {
+                        "key1": "value1",
+                        "keyN": "valueN"
+                    }
+                }
+            ],
+            "ordened": false
+        }
+    }
+}
