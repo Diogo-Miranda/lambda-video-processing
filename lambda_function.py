@@ -12,11 +12,12 @@ from PIL import Image
 
 FFMPEG_LAYER_PATH = '/opt/bin/ffmpeg'
 FFMPEG_LAYER_PATH_LOCAL = 'ffmpeg'
-ENVIRONMENT = 'production'  # production | local
+ENVIRONMENT = 'local'  # production | local
 BUCKET_NAME = 'photos-processing'
+OUTPUT_BUCKET_NAME = 'retrospet-photos-users'
 
-MAX_WORKERS_PROCESS_CLIPS = 5
-MAX_WORKERS_PROCESS_IMAGES = 5
+MAX_WORKERS_PROCESS_CLIPS = 14
+MAX_WORKERS_PROCESS_IMAGES = 20
 
 class VideoProcessor:
     def __init__(self, event: Dict[str, Any]):
@@ -33,9 +34,17 @@ class VideoProcessor:
         try:
             print("Getting images from event...")
             bucket_uri = self.event['videoConfig']['uploadedResources']['bucketKey']
-            bucket_name = bucket_uri.split('//')[1].split('/')[0]
-            prefix = '/'.join(bucket_uri.split('//')[1].split('/')[1:])
+            
+            if '//' in bucket_uri:
+                bucket_name = bucket_uri.split('//')[1].split('/')[0]
+                prefix = '/'.join(bucket_uri.split('//')[1].split('/')[1:])
+            else:
+                parts = bucket_uri.split('/', 1)
+                bucket_name = parts[0]
+                prefix = parts[1] if len(parts) > 1 else ''
 
+            print(f"Parsed bucket name: {bucket_name}, prefix: {prefix}")
+            
             temp_dir = '/tmp' if ENVIRONMENT != 'local' else './temp'
             images_dir = os.path.join(temp_dir, 'user_images')
             if not os.path.exists(images_dir):
@@ -399,11 +408,10 @@ class VideoProcessor:
             concat_file_path = self.process_videos(final_video_order)
             output_path = self.merge_videos(concat_file_path)
 
-            timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-            output_key = f'static/output/merged_video_{timestamp}.mp4'
+            output_key = f'users_videos/{self.event["videoConfig"]["uploadedResources"]["folderId"]}.mp4'
 
             print(f"Uploading final video to S3: {output_key}")
-            self.s3_client.upload_file(output_path, BUCKET_NAME, output_key)
+            self.s3_client.upload_file(output_path, OUTPUT_BUCKET_NAME, output_key)
 
             processing_time = time.time() - self.start_time
             print(f"Processing completed in {processing_time:.2f} seconds")
@@ -411,7 +419,7 @@ class VideoProcessor:
             return {
                 'statusCode': 200,
                 'body': {
-                    'url': f's3://{BUCKET_NAME}/{output_key}',
+                    'url': f's3://{OUTPUT_BUCKET_NAME}/{output_key}',
                     'processingTime': f"{processing_time:.2f} segundos",
                     'clipCount': len(final_video_order)
                 }

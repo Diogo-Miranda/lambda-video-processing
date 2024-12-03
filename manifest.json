@@ -1,6 +1,5 @@
 {
     "videoConfig": {
-        "name": "cao_video_1733025387543",
         "trackOrder": [
             "initial",
             "template",
@@ -15,7 +14,8 @@
             "final"
         ],
         "uploadedResources": {
-            "bucketKey": "s3://retrospet-photos-users/test"
+            "bucketKey": "retrospet-photos-users/users_photos/ec0a4898-b010-47d7-9ac4-431ee87e72c6",
+            "folderId": "ec0a4898-b010-47d7-9ac4-431ee87e72c6"
         }
     },
     "static": {
@@ -27,7 +27,12 @@
                     "link": "static/initial/capa.mp4",
                     "type": "video",
                     "metadata": {
-                        "petType": "cao",
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
                         "clipType": "initial"
                     }
                 },
@@ -35,7 +40,12 @@
                     "link": "static/initial/nome_pet_e_dono.mp4",
                     "type": "video",
                     "metadata": {
-                        "petType": "cao",
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
                         "clipType": "initial"
                     }
                 }
@@ -47,42 +57,67 @@
             "quantity": 5,
             "clips": [
                 {
-                    "link": "static/cartelas/cao/VerdeEscuro-08.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "petType": "cao",
-                        "clipType": "card"
-                    }
-                },
-                {
-                    "link": "static/cartelas/cao/VerdeEscuro-07.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "petType": "cao",
-                        "clipType": "card"
-                    }
-                },
-                {
-                    "link": "static/cartelas/cao/VerdeClaro-03.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "petType": "cao",
-                        "clipType": "card"
-                    }
-                },
-                {
-                    "link": "static/cartelas/cao/VerdeClaro-01.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "petType": "cao",
-                        "clipType": "card"
-                    }
-                },
-                {
                     "link": "static/cartelas/cao/VerdeMedio-06.mp4",
                     "type": "video",
                     "metadata": {
-                        "petType": "cao",
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeEscuro-04.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeEscuro-02.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeEscuro-03.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeEscuro-05.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
                         "clipType": "card"
                     }
                 }
@@ -94,26 +129,57 @@
             "quantity": 5,
             "clips": [
                 {
-                    "link": "static/templates/FundoFotoVerdeClaro-02.mp4",
+                    "link": "static/templates/FundoFotoVerdeEscuro-03.mp4",
                     "type": "video",
                     "metadata": {
-                        "petType": "cao",
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
                         "clipType": "template",
                         "rotation": {
-                            "width": 800,
-                            "height": 1060,
-                            "rotation": 2.2,
-                            "x": 129,
-                            "y": 369
+                            "width": 900,
+                            "height": 720,
+                            "rotation": 3,
+                            "x": 98,
+                            "y": 560
                         },
                         "initialTimestamp": 6
                     }
                 },
                 {
-                    "link": "static/templates/FundoFotoVerdeMedio-04.mp4",
+                    "link": "static/templates/FundoFotoVerdeClaro-06.mp4",
                     "type": "video",
                     "metadata": {
-                        "petType": "cao",
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 878,
+                            "height": 870,
+                            "rotation": 1,
+                            "x": 97,
+                            "y": 457
+                        },
+                        "initialTimestamp": 15
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeClaro-04.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
                         "clipType": "template",
                         "rotation": {
                             "width": 900,
@@ -122,14 +188,40 @@
                             "x": 96,
                             "y": 426
                         },
-                        "initialTimestamp": 15
+                        "initialTimestamp": 24
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeEscuro-04.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 900,
+                            "rotation": 1.5,
+                            "x": 96,
+                            "y": 426
+                        },
+                        "initialTimestamp": 30
                     }
                 },
                 {
                     "link": "static/templates/FundoFotoVerdeMedio-03.mp4",
                     "type": "video",
                     "metadata": {
-                        "petType": "cao",
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
                         "clipType": "template",
                         "rotation": {
                             "width": 900,
@@ -137,38 +229,6 @@
                             "rotation": 3,
                             "x": 98,
                             "y": 560
-                        },
-                        "initialTimestamp": 24
-                    }
-                },
-                {
-                    "link": "static/templates/FundoFotoVerdeClaro-03.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "petType": "cao",
-                        "clipType": "template",
-                        "rotation": {
-                            "width": 900,
-                            "height": 720,
-                            "rotation": 3,
-                            "x": 98,
-                            "y": 560
-                        },
-                        "initialTimestamp": 30
-                    }
-                },
-                {
-                    "link": "static/templates/FundoFotoVerdeEscuro-02.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "petType": "cao",
-                        "clipType": "template",
-                        "rotation": {
-                            "width": 800,
-                            "height": 1060,
-                            "rotation": 2.2,
-                            "x": 129,
-                            "y": 369
                         },
                         "initialTimestamp": 39
                     }
@@ -184,7 +244,12 @@
                     "link": "static/final/final_step_1.mp4",
                     "type": "video",
                     "metadata": {
-                        "petType": "cao",
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
                         "clipType": "final"
                     }
                 },
@@ -192,7 +257,12 @@
                     "link": "static/final/final_step_2.mp4",
                     "type": "video",
                     "metadata": {
-                        "petType": "cao",
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
                         "clipType": "final"
                     }
                 },
@@ -200,7 +270,12 @@
                     "link": "static/final/final_step_3.mp4",
                     "type": "video",
                     "metadata": {
-                        "petType": "cao",
+                        "pets": [
+                            {
+                                "name": "Joao",
+                                "type": "CAO"
+                            }
+                        ],
                         "clipType": "final"
                     }
                 }
