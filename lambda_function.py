@@ -13,7 +13,7 @@ from PIL import Image
 FFMPEG_LAYER_PATH = '/opt/bin/ffmpeg'
 FFMPEG_LAYER_PATH_WITH_DRAW_TEXT = '/opt/bin/ffmpeg2'
 FFMPEG_LAYER_PATH_LOCAL = "ffmpeg"
-ENVIRONMENT = 'production'  # production | local
+ENVIRONMENT = 'local'  # production | local
 BUCKET_NAME = 'photos-processing'
 OUTPUT_BUCKET_NAME = 'retrospet-photos-users'
 
@@ -496,21 +496,29 @@ class VideoProcessor:
 
     def merge_videos(self, concat_file_path: str) -> str:
         print("Merging videos...")
+        temp_output = NamedTemporaryFile(suffix='_temp.mp4', delete=False)
         final_output = NamedTemporaryFile(suffix='_final.mp4', delete=False)
-        self.temp_files.append(final_output.name)
+        self.temp_files.extend([temp_output.name, final_output.name])
 
+        # Download audio file
+        audio_path = '/tmp/audio.mp3' if ENVIRONMENT != 'local' else './temp/audio.mp3'
+        print("Downloading audio file...")
+        self.s3_client.download_file(BUCKET_NAME, 'audio/audio.mp3', audio_path)
+        self.temp_files.append(audio_path)
+
+        # First merge videos without audio
         merge_cmd = [
             self.ffmpeg_path, '-y', '-f', 'concat', '-safe', '0',
             '-i', concat_file_path,
             '-c:v', 'libx264',
-            '-crf', '28',  # Aumentado de 23 para 28 (menor qualidade mas mais rápido)
-            '-preset', 'veryfast',  # Mudado de 'medium' para 'veryfast'
+            '-crf', '28',
+            '-preset', 'veryfast',
             '-pix_fmt', 'yuv420p',
             '-movflags', '+faststart',
             '-threads', 'auto',
-            '-tune', 'fastdecode',  # Adicionado para otimizar decodificação
-            '-an',  # No audio
-            final_output.name
+            '-tune', 'fastdecode',
+            '-an',  # Remove any existing audio
+            temp_output.name
         ]
 
         print("Executing merge command...")
@@ -518,9 +526,28 @@ class VideoProcessor:
             result = subprocess.run(merge_cmd, capture_output=True, text=True, check=True)
             print(f"Merge command output: {result.stdout}")
             print(f"Merge command error: {result.stderr}")
+        
+            # Add audio to the merged video with improved settings
+            print("Adding audio to video...")
+            audio_cmd = [
+                self.ffmpeg_path,
+                '-i', temp_output.name,
+                '-i', audio_path,
+                '-c:v', 'copy',            # Copy video without re-encoding
+                '-c:a', 'aac',             # Use AAC codec for audio
+                '-map', '0:v:0',           # Map video from first input
+                '-map', '1:a:0',           # Map audio from second input
+                '-y',                      # Overwrite output file if exists
+                final_output.name
+            ]
+            
+            result = subprocess.run(audio_cmd, capture_output=True, text=True, check=True)
+            print(f"Audio addition output: {result.stdout}")
+            print(f"Audio addition error: {result.stderr}")
+
         except subprocess.CalledProcessError as e:
-            print(f"Error merging videos: {e.stderr}")
-            raise Exception(f"Failed to merge videos: {e.stderr}")
+            print(f"Error in video processing: {e.stderr}")
+            raise Exception(f"Failed to process video: {e.stderr}")
 
         return final_output.name
 
@@ -564,5 +591,477 @@ def lambda_handler(event, context):
     processor = VideoProcessor(event)
     return processor.process()
 
-# if __name__ == "__main__":
-#     lambda_handler(mockInput, None)
+mockInput = {
+    "videoConfig": {
+        "trackOrder": [
+            "initial",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "final"
+        ],
+        "uploadedResources": {
+            "bucketKey": "s3://retrospet-photos-users/users_photos/test",
+            "folderId": "9d91b9ad-be6b-40fd-9a11-152cc6f55c87"
+        },
+        "textOptions": {
+            "firstLine": "Diogo, asdasdsads",
+            "secondLine": "sadasdsada, sadasdsads",
+            "thirdLine": "& sadasdasda"
+        }
+    },
+    "static": {
+        "initial": {
+            "refId": "initial",
+            "quantity": 2,
+            "clips": [
+                {
+                    "link": "static/initial/capa.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "initial"
+                    }
+                },
+                {
+                    "link": "static/initial/nome_pet_e_dono.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "initial"
+                    }
+                }
+            ],
+            "ordened": 1
+        },
+        "cards": {
+            "refId": "card",
+            "quantity": 5,
+            "clips": [
+                {
+                    "link": "static/cartelas/cao/VerdeClaro-01.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeEscuro-08.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeClaro-06.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeEscuro-02.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeClaro-05.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                }
+            ],
+            "ordened": 0
+        },
+        "templates": {
+            "refId": "template",
+            "quantity": 5,
+            "clips": [
+                {
+                    "link": "static/templates/FundoFotoVerdeEscuro-06.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 878,
+                            "height": 870,
+                            "rotation": 1,
+                            "x": 97,
+                            "y": 457
+                        },
+                        "initialTimestamp": 6
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeEscuro-03.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 720,
+                            "rotation": 3,
+                            "x": 98,
+                            "y": 560
+                        },
+                        "initialTimestamp": 15
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeEscuro-02.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 800,
+                            "height": 1060,
+                            "rotation": 2.2,
+                            "x": 129,
+                            "y": 369
+                        },
+                        "initialTimestamp": 24
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeEscuro-01.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 900,
+                            "rotation": 1.7,
+                            "x": 85,
+                            "y": 447
+                        },
+                        "initialTimestamp": 30
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeMedio-06.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 878,
+                            "height": 870,
+                            "rotation": 1,
+                            "x": 97,
+                            "y": 457
+                        },
+                        "initialTimestamp": 39
+                    }
+                }
+            ],
+            "ordened": 0
+        },
+        "final": {
+            "refId": "final",
+            "quantity": 3,
+            "clips": [
+                {
+                    "link": "static/final/final_step_1.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                },
+                {
+                    "link": "static/final/final_step_2.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                },
+                {
+                    "link": "static/final/final_step_3.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                }
+            ],
+            "ordened": 1
+        }
+    }
+}
+
+if __name__ == "__main__":
+    lambda_handler(mockInput, None)
