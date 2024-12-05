@@ -11,22 +11,41 @@ from botocore.config import Config
 from PIL import Image
 
 FFMPEG_LAYER_PATH = '/opt/bin/ffmpeg'
-FFMPEG_LAYER_PATH_LOCAL = 'ffmpeg'
-ENVIRONMENT = 'local'  # production | local
+FFMPEG_LAYER_PATH_WITH_DRAW_TEXT = '/opt/bin/ffmpeg2'
+FFMPEG_LAYER_PATH_LOCAL = "ffmpeg"
+ENVIRONMENT = 'production'  # production | local
 BUCKET_NAME = 'photos-processing'
 OUTPUT_BUCKET_NAME = 'retrospet-photos-users'
 
-MAX_WORKERS_PROCESS_CLIPS = 14
-MAX_WORKERS_PROCESS_IMAGES = 20
+MAX_WORKERS_PROCESS_CLIPS = 1
+MAX_WORKERS_PROCESS_IMAGES = 10
 
 class VideoProcessor:
     def __init__(self, event: Dict[str, Any]):
         print("Initializing VideoProcessor...")
         self.event = event
         self.ffmpeg_path = self.setup_ffmpeg()
+        self.ffmpeg_with_draw_text_path = self.setup_ffmpeg_with_draw_text()
         self.s3_client = self.configure_s3_client()
         self.temp_files: List[str] = []
         self.start_time = time.time()
+
+        # Ensure the temporary directory exists
+        temp_dir = '/tmp' if ENVIRONMENT != 'local' else './temp'
+        if not os.path.exists(temp_dir):
+            os.makedirs(temp_dir)
+
+        # Download font file from S3
+        self.font_path = os.path.join(temp_dir, 'kaarna-regular.otf')
+        try:
+            self.s3_client.download_file(BUCKET_NAME, 'font/kaarna-regular.otf', self.font_path)
+            os.chmod(self.font_path, 0o644)
+            print(f"Font downloaded successfully to {self.font_path}")
+        except Exception as e:
+            print(f"Error downloading font: {str(e)}")
+            raise
+
+        self.temp_files.append(self.font_path)
         self.images = self.get_images_from_event()
         print(f"Found {len(self.images)} images to process")
 
@@ -153,7 +172,7 @@ class VideoProcessor:
             image_video_output = os.path.join(temp_dir, f"image_video_{template_id}.mp4")
             
             ffmpeg_command = [
-                "ffmpeg",
+                self.ffmpeg_path,
                 *ffmpeg_inputs,
                 "-filter_complex",
                 concat_filter,
@@ -179,7 +198,7 @@ class VideoProcessor:
             y_position = rotation_config["y"]
             ffmpeg_process = subprocess.Popen(
                 [
-                    "ffmpeg",
+                    self.ffmpeg_path,
                     "-i",
                     template_path,
                     "-i",
@@ -230,6 +249,21 @@ class VideoProcessor:
 
         os.chmod(FFMPEG_LAYER_PATH, stat.S_IEXEC | stat.S_IREAD)
         return FFMPEG_LAYER_PATH
+    
+    def setup_ffmpeg_with_draw_text(self) -> str:
+        print("Setting up FFmpeg with draw text...")
+        if ENVIRONMENT == 'local':
+            return FFMPEG_LAYER_PATH_LOCAL
+
+        if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+            tmp_ffmpeg = '/tmp/ffmpeg2'
+            if not os.path.exists(tmp_ffmpeg):
+                os.system(f'cp {FFMPEG_LAYER_PATH_WITH_DRAW_TEXT} {tmp_ffmpeg}')
+                os.chmod(tmp_ffmpeg, stat.S_IEXEC | stat.S_IREAD)
+            return tmp_ffmpeg
+
+        os.chmod(FFMPEG_LAYER_PATH_WITH_DRAW_TEXT, stat.S_IEXEC | stat.S_IREAD)
+        return FFMPEG_LAYER_PATH_WITH_DRAW_TEXT
 
     def configure_s3_client(self):
         print("Configuring S3 client...")
@@ -314,7 +348,134 @@ class VideoProcessor:
             clip_type = clip["metadata"]["clipType"]
             print(f"Processing clip {index} of type {clip_type}")
 
-            if clip_type == "template":
+            # Pré-processamento para o clip nome_pet_e_dono.mp4
+            if clip["link"].endswith("nome_pet_e_dono.mp4"):
+                try:
+                    # Configurações do vídeo
+                    VIDEO_WIDTH = 1080
+                    VIDEO_HEIGHT = 1920
+                    FONT_SIZE = 120
+                    FONT_COLOR = "#158e4d"
+                    VERTICAL_SPACING = 140  # Espaçamento entre os nomes
+
+                    temp_path = os.path.join(
+                        temp_dir, f"{index}_{clip_type}_{os.path.basename(clip['link'])}"
+                    )
+                    self.s3_client.download_file(BUCKET_NAME, clip["link"], temp_path)
+                    
+                    # Definir caminho da fonte
+                    font_path = self.font_path
+                    
+                    # Obter configurações do pet e dono
+                    pet_config = self.event['videoConfig']['petConfig']
+                    owner = pet_config['owner']
+                    pets = pet_config['pets']
+                    
+                    # Base Y position for the owner's name
+                    base_y = 1050
+                    
+                    text_filters = []
+                    base_y = 1050
+                    spacing = 140
+
+                    # Preparar texto para FFmpeg - Owner
+                    text_filters.append(
+                        f"drawtext=text='{owner['name']}'"
+                        f":fontfile='{self.font_path}'"
+                        f":fontsize={FONT_SIZE}"
+                        f":fontcolor='{FONT_COLOR}'"
+                        f":x=(w-text_w)/2:y={base_y}"
+                    )
+                    
+                    # Adicionar nomes dos pets
+                    for i, pet in enumerate(pets, 1):
+                        y_position = base_y + ((i + 1) * spacing)
+                        text_filters.append(
+                            f"drawtext=text='& {pet['name']}'"
+                            f":fontfile='{self.font_path}'"
+                            f":fontsize={FONT_SIZE}"
+                            f":fontcolor='{FONT_COLOR}'"
+                            f":x=(w-text_w)/2:y={y_position}"
+                        )
+
+                    filter_complex = ','.join(text_filters)
+
+                    # Criar arquivo temporário para output
+                    output_path = os.path.join(
+                        temp_dir, f"processed_{index}_{os.path.basename(clip['link'])}"
+                    )
+
+                    final_path = os.path.join(
+                        temp_dir, f"processed_final_{index}_{os.path.basename(clip['link'])}"
+                    )
+                    # Verificar se o arquivo de entrada existe
+                    if not os.path.exists(temp_path):
+                        raise Exception(f"Input file not found at {temp_path}")
+
+                    # Verificar fonte antes de processar
+                    if not os.path.exists(self.font_path):
+                        raise Exception(f"Font file not found at {self.font_path}")
+
+                    print(f"Using font file at {self.font_path}")
+                    print(f"Using ffmpeg at {self.ffmpeg_path}")
+
+                    # Primeiro, aplicar o texto
+                    temp_output_path = os.path.join(
+                        temp_dir, f"temp_text_{os.path.basename(clip['link'])}"
+                    )
+                    
+                    text_command = [
+                        self.ffmpeg_with_draw_text_path,
+                        "-i", temp_path,
+                        "-vf", filter_complex,
+                        "-c:a", "copy",
+                        "-y",
+                        temp_output_path
+                    ]
+
+                    # Executar primeiro comando
+                    subprocess.run(text_command, check=True, capture_output=True, text=True)
+
+                    # Agora, recodificar com as especificações exatas
+                    final_command = [
+                        self.ffmpeg_path,
+                        "-i", temp_output_path,
+                        "-c:v", "libx264",
+                        "-profile:v", "high",
+                        "-level:v", "4.1",
+                        "-pix_fmt", "yuv420p",
+                        "-r", "29.97",
+                        "-b:v", "1301k",
+                        "-video_track_timescale", "30k",
+                        "-color_primaries", "bt709",
+                        "-color_trc", "bt709",
+                        "-colorspace", "bt709",
+                        "-g", "60",  # Substitui keyint
+                        "-bf", "3",  # Número de B-frames
+                        "-refs", "3",  # Número de frames de referência
+                        "-tag:v", "avc1",
+                        "-y",
+                        final_path
+                    ]
+
+                    # Executar segundo comando
+                    subprocess.run(final_command, check=True, capture_output=True, text=True)
+
+                    output_path = final_path
+
+                    # Limpar arquivo temporário intermediário
+                    os.remove(temp_output_path)
+
+                    return index, output_path
+                except subprocess.CalledProcessError as e:
+                    print(f"FFmpeg error: {e.stderr}")
+                    print(f"FFmpeg command was: {' '.join(final_command)}")
+                    raise Exception(f"FFmpeg failed: {e.stderr}")
+                except Exception as e:
+                    print(f"Error processing text overlay: {str(e)}")
+                    raise
+
+            elif clip_type == "template":
                 # Calcular número de imagens para este template
                 num_images = images_per_template
                 if excess_images > 0:

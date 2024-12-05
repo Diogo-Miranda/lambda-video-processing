@@ -1,2 +1,8 @@
-moviepy==1.0.3
-boto3==1.26.137
+moviepy>=1.0.3
+Pillow>=9.0.0
+numpy>=1.22.0
+decorator>=4.4.2
+proglog>=0.1.10
+requests>=2.27.1
+tqdm>=4.64.1
+imageio-ffmpeg>=0.4.7

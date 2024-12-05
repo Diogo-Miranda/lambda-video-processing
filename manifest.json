@@ -16,6 +16,29 @@
         "uploadedResources": {
             "bucketKey": "retrospet-photos-users/users_photos/ec0a4898-b010-47d7-9ac4-431ee87e72c6",
             "folderId": "ec0a4898-b010-47d7-9ac4-431ee87e72c6"
+        },
+        "petConfig": {
+            "owner": {
+                "name": "Diogo"
+            },
+            "pets": [
+                {
+                    "name": "& Bolota",
+                    "type": "cao"
+                },
+                { 
+                    "name": "& Pandinha",
+                    "type": "gato"
+                },
+                { 
+                    "name": "& Toto",
+                    "type": "gato"
+                },
+                { 
+                    "name": "& Mimi",
+                    "type": "gato"
+                }
+            ]
         }
     },
     "static": {
