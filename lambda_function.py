@@ -351,51 +351,53 @@ class VideoProcessor:
             # Pré-processamento para o clip nome_pet_e_dono.mp4
             if clip["link"].endswith("nome_pet_e_dono.mp4"):
                 try:
-                    # Configurações do vídeo
+                    # Video settings
                     VIDEO_WIDTH = 1080
                     VIDEO_HEIGHT = 1920
-                    FONT_SIZE = 120
+                    FONT_SIZE = 110
                     FONT_COLOR = "#158e4d"
-                    VERTICAL_SPACING = 140  # Espaçamento entre os nomes
+                    VERTICAL_SPACING = 140  # Spacing between names
 
                     temp_path = os.path.join(
                         temp_dir, f"{index}_{clip_type}_{os.path.basename(clip['link'])}"
                     )
                     self.s3_client.download_file(BUCKET_NAME, clip["link"], temp_path)
                     
-                    # Definir caminho da fonte
-                    font_path = self.font_path
+                    # Get text options from event
+                    text_options = self.event['videoConfig'].get('textOptions', {})
                     
-                    # Obter configurações do pet e dono
-                    pet_config = self.event['videoConfig']['petConfig']
-                    owner = pet_config['owner']
-                    pets = pet_config['pets']
-                    
-                    # Base Y position for the owner's name
-                    base_y = 1050
-                    
+                    # Prepare text filters
                     text_filters = []
-                    base_y = 1050
-                    spacing = 140
+                    base_y = 1050  # Base Y position
 
-                    # Preparar texto para FFmpeg - Owner
-                    text_filters.append(
-                        f"drawtext=text='{owner['name']}'"
-                        f":fontfile='{self.font_path}'"
-                        f":fontsize={FONT_SIZE}"
-                        f":fontcolor='{FONT_COLOR}'"
-                        f":x=(w-text_w)/2:y={base_y}"
-                    )
-                    
-                    # Adicionar nomes dos pets
-                    for i, pet in enumerate(pets, 1):
-                        y_position = base_y + ((i + 1) * spacing)
+                    # Add firstLine if exists
+                    if first_line := text_options.get('firstLine'):
                         text_filters.append(
-                            f"drawtext=text='& {pet['name']}'"
+                            f"drawtext=text='{first_line}'"
                             f":fontfile='{self.font_path}'"
                             f":fontsize={FONT_SIZE}"
                             f":fontcolor='{FONT_COLOR}'"
-                            f":x=(w-text_w)/2:y={y_position}"
+                            f":x=(w-text_w)/2:y={base_y}"
+                        )
+
+                    # Add secondLine if exists
+                    if second_line := text_options.get('secondLine'):
+                        text_filters.append(
+                            f"drawtext=text='{second_line}'"
+                            f":fontfile='{self.font_path}'"
+                            f":fontsize={FONT_SIZE}"
+                            f":fontcolor='{FONT_COLOR}'"
+                            f":x=(w-text_w)/2:y={base_y + VERTICAL_SPACING}"
+                        )
+
+                    # Add thirdLine if exists
+                    if third_line := text_options.get('thirdLine'):
+                        text_filters.append(
+                            f"drawtext=text='{third_line}'"
+                            f":fontfile='{self.font_path}'"
+                            f":fontsize={FONT_SIZE}"
+                            f":fontcolor='{FONT_COLOR}'"
+                            f":x=(w-text_w)/2:y={base_y + (VERTICAL_SPACING * 2)}"
                         )
 
                     filter_complex = ','.join(text_filters)

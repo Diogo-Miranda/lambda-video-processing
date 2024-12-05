@@ -1,0 +1,410 @@
+{
+    "videoConfig": {
+        "trackOrder": [
+            "initial",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "final"
+        ],
+        "uploadedResources": {
+            "bucketKey": "retrospet-photos-users/users_photos/162df949-e030-49cd-b5ab-28a43d09d645",
+            "folderId": "162df949-e030-49cd-b5ab-28a43d09d645"
+        },
+        "textOptions": {
+            "firstLine": "Diogo Miranda, Souza",
+            "secondLine": "Almeida & Lindo"
+        }
+    },
+    "static": {
+        "initial": {
+            "refId": "initial",
+            "quantity": 2,
+            "clips": [
+                {
+                    "link": "static/initial/capa.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "initial"
+                    }
+                },
+                {
+                    "link": "static/initial/nome_pet_e_dono.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "initial"
+                    }
+                }
+            ],
+            "ordened": 1
+        },
+        "cards": {
+            "refId": "card",
+            "quantity": 5,
+            "clips": [
+                {
+                    "link": "static/cartelas/cao/VerdeEscuro-01.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeMedio-06.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeEscuro-05.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeMedio-02.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeEscuro-03.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                }
+            ],
+            "ordened": 0
+        },
+        "templates": {
+            "refId": "template",
+            "quantity": 5,
+            "clips": [
+                {
+                    "link": "static/templates/FundoFotoVerdeMedio-02.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 800,
+                            "height": 1060,
+                            "rotation": 2.2,
+                            "x": 129,
+                            "y": 369
+                        },
+                        "initialTimestamp": 6
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeEscuro-04.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 900,
+                            "rotation": 1.5,
+                            "x": 96,
+                            "y": 426
+                        },
+                        "initialTimestamp": 15
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeClaro-05.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 860,
+                            "height": 1100,
+                            "rotation": -3.6,
+                            "x": 106,
+                            "y": 329
+                        },
+                        "initialTimestamp": 24
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeClaro-06.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 878,
+                            "height": 870,
+                            "rotation": 1,
+                            "x": 97,
+                            "y": 457
+                        },
+                        "initialTimestamp": 30
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeMedio-03.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 720,
+                            "rotation": 3,
+                            "x": 98,
+                            "y": 560
+                        },
+                        "initialTimestamp": 39
+                    }
+                }
+            ],
+            "ordened": 0
+        },
+        "final": {
+            "refId": "final",
+            "quantity": 3,
+            "clips": [
+                {
+                    "link": "static/final/final_step_1.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                },
+                {
+                    "link": "static/final/final_step_2.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                },
+                {
+                    "link": "static/final/final_step_3.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Lindo",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                }
+            ],
+            "ordened": 1
+        }
+    }
+}

@@ -1,0 +1,350 @@
+{
+    "videoConfig": {
+        "trackOrder": [
+            "initial",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "final"
+        ],
+        "uploadedResources": {
+            "bucketKey": "retrospet-photos-users/users_photos/9fc2d52e-af81-4fd9-b0b7-d7024b95436b",
+            "folderId": "9fc2d52e-af81-4fd9-b0b7-d7024b95436b"
+        },
+        "textOptions": {
+            "firstLine": "Diogo Miranda, Souza",
+            "secondLine": "& Almeida"
+        }
+    },
+    "static": {
+        "initial": {
+            "refId": "initial",
+            "quantity": 2,
+            "clips": [
+                {
+                    "link": "static/initial/capa.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "initial"
+                    }
+                },
+                {
+                    "link": "static/initial/nome_pet_e_dono.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "initial"
+                    }
+                }
+            ],
+            "ordened": 1
+        },
+        "cards": {
+            "refId": "card",
+            "quantity": 5,
+            "clips": [
+                {
+                    "link": "static/cartelas/cao/VerdeMedio-05.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeMedio-06.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeMedio-07.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeClaro-08.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao/VerdeMedio-03.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                }
+            ],
+            "ordened": 0
+        },
+        "templates": {
+            "refId": "template",
+            "quantity": 5,
+            "clips": [
+                {
+                    "link": "static/templates/FundoFotoVerdeClaro-01.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 900,
+                            "rotation": 1.7,
+                            "x": 85,
+                            "y": 447
+                        },
+                        "initialTimestamp": 6
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeClaro-04.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 900,
+                            "rotation": 1.5,
+                            "x": 96,
+                            "y": 426
+                        },
+                        "initialTimestamp": 15
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeMedio-04.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 900,
+                            "rotation": 1.5,
+                            "x": 96,
+                            "y": 426
+                        },
+                        "initialTimestamp": 24
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeClaro-03.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 720,
+                            "rotation": 3,
+                            "x": 98,
+                            "y": 560
+                        },
+                        "initialTimestamp": 30
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeClaro-05.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 860,
+                            "height": 1100,
+                            "rotation": -3.6,
+                            "x": 106,
+                            "y": 329
+                        },
+                        "initialTimestamp": 39
+                    }
+                }
+            ],
+            "ordened": 0
+        },
+        "final": {
+            "refId": "final",
+            "quantity": 3,
+            "clips": [
+                {
+                    "link": "static/final/final_step_1.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                },
+                {
+                    "link": "static/final/final_step_2.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                },
+                {
+                    "link": "static/final/final_step_3.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Souza",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "Almeida",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                }
+            ],
+            "ordened": 1
+        }
+    }
+}

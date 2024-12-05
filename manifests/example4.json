@@ -1,0 +1,471 @@
+{
+    "videoConfig": {
+        "trackOrder": [
+            "initial",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "final"
+        ],
+        "uploadedResources": {
+            "bucketKey": "retrospet-photos-users/users_photos/9d91b9ad-be6b-40fd-9a11-152cc6f55c87",
+            "folderId": "9d91b9ad-be6b-40fd-9a11-152cc6f55c87"
+        },
+        "textOptions": {
+            "firstLine": "Diogo, asdasdsads",
+            "secondLine": "sadasdsada, sadasdsads",
+            "thirdLine": "& sadasdasda"
+        }
+    },
+    "static": {
+        "initial": {
+            "refId": "initial",
+            "quantity": 2,
+            "clips": [
+                {
+                    "link": "static/initial/capa.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "initial"
+                    }
+                },
+                {
+                    "link": "static/initial/nome_pet_e_dono.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "initial"
+                    }
+                }
+            ],
+            "ordened": 1
+        },
+        "cards": {
+            "refId": "card",
+            "quantity": 5,
+            "clips": [
+                {
+                    "link": "static/cartelas/cao_gato/VerdeClaro-01.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao_gato/VerdeEscuro-08.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao_gato/VerdeClaro-06.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao_gato/VerdeEscuro-02.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/cao_gato/VerdeClaro-05.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                }
+            ],
+            "ordened": 0
+        },
+        "templates": {
+            "refId": "template",
+            "quantity": 5,
+            "clips": [
+                {
+                    "link": "static/templates/FundoFotoVerdeEscuro-06.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 878,
+                            "height": 870,
+                            "rotation": 1,
+                            "x": 97,
+                            "y": 457
+                        },
+                        "initialTimestamp": 6
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeEscuro-03.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 720,
+                            "rotation": 3,
+                            "x": 98,
+                            "y": 560
+                        },
+                        "initialTimestamp": 15
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeEscuro-02.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 800,
+                            "height": 1060,
+                            "rotation": 2.2,
+                            "x": 129,
+                            "y": 369
+                        },
+                        "initialTimestamp": 24
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeEscuro-01.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 900,
+                            "rotation": 1.7,
+                            "x": 85,
+                            "y": 447
+                        },
+                        "initialTimestamp": 30
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeMedio-06.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 878,
+                            "height": 870,
+                            "rotation": 1,
+                            "x": 97,
+                            "y": 457
+                        },
+                        "initialTimestamp": 39
+                    }
+                }
+            ],
+            "ordened": 0
+        },
+        "final": {
+            "refId": "final",
+            "quantity": 3,
+            "clips": [
+                {
+                    "link": "static/final/final_step_1.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                },
+                {
+                    "link": "static/final/final_step_2.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                },
+                {
+                    "link": "static/final/final_step_3.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "asdasdsads",
+                                "type": "GATO"
+                            },
+                            {
+                                "name": "sadasdsada",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdsads",
+                                "type": "CAO"
+                            },
+                            {
+                                "name": "sadasdasda",
+                                "type": "CAO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                }
+            ],
+            "ordened": 1
+        }
+    }
+}
