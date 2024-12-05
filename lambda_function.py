@@ -17,7 +17,7 @@ ENVIRONMENT = 'production'  # production | local
 BUCKET_NAME = 'photos-processing'
 OUTPUT_BUCKET_NAME = 'retrospet-photos-users'
 
-MAX_WORKERS_PROCESS_CLIPS = 1
+MAX_WORKERS_PROCESS_CLIPS = 10
 MAX_WORKERS_PROCESS_IMAGES = 10
 
 class VideoProcessor:
@@ -145,14 +145,15 @@ class VideoProcessor:
             for idx, image_path in enumerate(image_paths):
                 image_output_path = os.path.join(temp_dir, f"image_{idx}.png")
 
-                # Ajustar tamanho e aplicar rotação na imagem
-                with Image.open(image_path).convert("RGBA") as img:
-                #img = self.adjust_image(img, rotation_config)
-                    img.save(image_output_path)
+                # Calcular dimensões mantendo a proporção
+                target_w = rotation_config['width']
+                target_h = rotation_config['height']
 
-                # Adicionar entrada ao filtro complexo
+                # Adicionar entrada ao filtro complexo com scale que preserva proporção
                 filter_complex_parts.append(
-                    f"[{idx}:v]scale={rotation_config['width']}:{rotation_config['height']},setsar=1[v{idx}]"
+                    f"[{idx}:v]scale=w={target_w}:h={target_h}:force_original_aspect_ratio=decrease,"
+                    f"pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2:color=#E9E7E9@1,"
+                    f"setsar=1[v{idx}]"
                 )
 
             # Construir o filtro complexo para concatenação
@@ -348,7 +349,7 @@ class VideoProcessor:
             clip_type = clip["metadata"]["clipType"]
             print(f"Processing clip {index} of type {clip_type}")
 
-            # Pré-processamento para o clip nome_pet_e_dono.mp4
+            # For nome_pet_e_dono.mp4 processing
             if clip["link"].endswith("nome_pet_e_dono.mp4"):
                 try:
                     # Video settings
@@ -356,76 +357,41 @@ class VideoProcessor:
                     VIDEO_HEIGHT = 1920
                     FONT_SIZE = 110
                     FONT_COLOR = "#158e4d"
-                    VERTICAL_SPACING = 140  # Spacing between names
+                    VERTICAL_SPACING = 140
 
                     temp_path = os.path.join(
                         temp_dir, f"{index}_{clip_type}_{os.path.basename(clip['link'])}"
                     )
                     self.s3_client.download_file(BUCKET_NAME, clip["link"], temp_path)
                     
-                    # Get text options from event
-                    text_options = self.event['videoConfig'].get('textOptions', {})
-                    
-                    # Prepare text filters
-                    text_filters = []
-                    base_y = 1050  # Base Y position
-
-                    # Add firstLine if exists
-                    if first_line := text_options.get('firstLine'):
-                        text_filters.append(
-                            f"drawtext=text='{first_line}'"
-                            f":fontfile='{self.font_path}'"
-                            f":fontsize={FONT_SIZE}"
-                            f":fontcolor='{FONT_COLOR}'"
-                            f":x=(w-text_w)/2:y={base_y}"
-                        )
-
-                    # Add secondLine if exists
-                    if second_line := text_options.get('secondLine'):
-                        text_filters.append(
-                            f"drawtext=text='{second_line}'"
-                            f":fontfile='{self.font_path}'"
-                            f":fontsize={FONT_SIZE}"
-                            f":fontcolor='{FONT_COLOR}'"
-                            f":x=(w-text_w)/2:y={base_y + VERTICAL_SPACING}"
-                        )
-
-                    # Add thirdLine if exists
-                    if third_line := text_options.get('thirdLine'):
-                        text_filters.append(
-                            f"drawtext=text='{third_line}'"
-                            f":fontfile='{self.font_path}'"
-                            f":fontsize={FONT_SIZE}"
-                            f":fontcolor='{FONT_COLOR}'"
-                            f":x=(w-text_w)/2:y={base_y + (VERTICAL_SPACING * 2)}"
-                        )
-
-                    filter_complex = ','.join(text_filters)
-
-                    # Criar arquivo temporário para output
-                    output_path = os.path.join(
-                        temp_dir, f"processed_{index}_{os.path.basename(clip['link'])}"
-                    )
-
-                    final_path = os.path.join(
-                        temp_dir, f"processed_final_{index}_{os.path.basename(clip['link'])}"
-                    )
-                    # Verificar se o arquivo de entrada existe
+                    # Verify input files exist
                     if not os.path.exists(temp_path):
                         raise Exception(f"Input file not found at {temp_path}")
-
-                    # Verificar fonte antes de processar
                     if not os.path.exists(self.font_path):
                         raise Exception(f"Font file not found at {self.font_path}")
 
-                    print(f"Using font file at {self.font_path}")
-                    print(f"Using ffmpeg at {self.ffmpeg_path}")
+                    text_options = self.event['videoConfig'].get('textOptions', {})
+                    text_filters = []
+                    base_y = 1050
 
-                    # Primeiro, aplicar o texto
-                    temp_output_path = os.path.join(
-                        temp_dir, f"temp_text_{os.path.basename(clip['link'])}"
-                    )
+                    # Add text filters
+                    for i, key in enumerate(['firstLine', 'secondLine', 'thirdLine']):
+                        if text := text_options.get(key):
+                            text_filters.append(
+                                f"drawtext=text='{text}'"
+                                f":fontfile='{self.font_path}'"
+                                f":fontsize={FONT_SIZE}"
+                                f":fontcolor='{FONT_COLOR}'"
+                                f":x=(w-text_w)/2:y={base_y + (VERTICAL_SPACING * i)}"
+                            )
+
+                    filter_complex = ','.join(text_filters)
                     
+                    # Define all output paths
+                    temp_output_path = os.path.join(temp_dir, f"temp_text_{os.path.basename(clip['link'])}")
+                    final_path = os.path.join(temp_dir, f"processed_final_{index}_{os.path.basename(clip['link'])}")
+
+                    # First command - Apply text
                     text_command = [
                         self.ffmpeg_with_draw_text_path,
                         "-i", temp_path,
@@ -434,11 +400,9 @@ class VideoProcessor:
                         "-y",
                         temp_output_path
                     ]
-
-                    # Executar primeiro comando
                     subprocess.run(text_command, check=True, capture_output=True, text=True)
 
-                    # Agora, recodificar com as especificações exatas
+                    # Second command - Encode with specifications
                     final_command = [
                         self.ffmpeg_path,
                         "-i", temp_output_path,
@@ -452,30 +416,29 @@ class VideoProcessor:
                         "-color_primaries", "bt709",
                         "-color_trc", "bt709",
                         "-colorspace", "bt709",
-                        "-g", "60",  # Substitui keyint
-                        "-bf", "3",  # Número de B-frames
-                        "-refs", "3",  # Número de frames de referência
+                        "-g", "60",
+                        "-bf", "3",
+                        "-refs", "3",
                         "-tag:v", "avc1",
                         "-y",
                         final_path
                     ]
-
-                    # Executar segundo comando
                     subprocess.run(final_command, check=True, capture_output=True, text=True)
 
-                    output_path = final_path
+                    # Cleanup temp file
+                    if os.path.exists(temp_output_path):
+                        os.remove(temp_output_path)
 
-                    # Limpar arquivo temporário intermediário
-                    os.remove(temp_output_path)
+                    return index, final_path
 
-                    return index, output_path
                 except subprocess.CalledProcessError as e:
-                    print(f"FFmpeg error: {e.stderr}")
-                    print(f"FFmpeg command was: {' '.join(final_command)}")
-                    raise Exception(f"FFmpeg failed: {e.stderr}")
+                    error_msg = f"FFmpeg error: {e.stderr}"
+                    print(error_msg)
+                    raise Exception(error_msg)
                 except Exception as e:
-                    print(f"Error processing text overlay: {str(e)}")
-                    raise
+                    error_msg = f"Error processing text overlay: {str(e)}"
+                    print(error_msg)
+                    raise Exception(error_msg)
 
             elif clip_type == "template":
                 # Calcular número de imagens para este template
