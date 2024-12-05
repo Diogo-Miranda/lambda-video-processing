@@ -9,11 +9,12 @@ from typing import List, Dict, Any
 import concurrent.futures
 from botocore.config import Config
 from PIL import Image
+import uuid
 
 FFMPEG_LAYER_PATH = '/opt/bin/ffmpeg'
 FFMPEG_LAYER_PATH_WITH_DRAW_TEXT = '/opt/bin/ffmpeg2'
 FFMPEG_LAYER_PATH_LOCAL = "ffmpeg"
-ENVIRONMENT = 'local'  # production | local
+ENVIRONMENT = 'production'  # production | local
 BUCKET_NAME = 'photos-processing'
 OUTPUT_BUCKET_NAME = 'retrospet-photos-users'
 
@@ -24,6 +25,18 @@ class VideoProcessor:
     def __init__(self, event: Dict[str, Any]):
         print("Initializing VideoProcessor...")
         self.event = event
+        self.execution_id = str(uuid.uuid4())  # Generate unique ID for this execution
+        self.temp_dir = self.setup_temp_dir()  # Create unique temp directory
+        
+        # Create subdirectories for better organization
+        self.images_dir = os.path.join(self.temp_dir, 'images')
+        self.videos_dir = os.path.join(self.temp_dir, 'videos')
+        self.temp_files_dir = os.path.join(self.temp_dir, 'temp')
+        
+        # Create all directories
+        for directory in [self.images_dir, self.videos_dir, self.temp_files_dir]:
+            os.makedirs(directory, exist_ok=True)
+        
         self.ffmpeg_path = self.setup_ffmpeg()
         self.ffmpeg_with_draw_text_path = self.setup_ffmpeg_with_draw_text()
         self.s3_client = self.configure_s3_client()
@@ -49,6 +62,13 @@ class VideoProcessor:
         self.images = self.get_images_from_event()
         print(f"Found {len(self.images)} images to process")
 
+    def setup_temp_dir(self) -> str:
+        """Create and return path to a unique temporary directory."""
+        base_temp_dir = '/tmp' if ENVIRONMENT != 'local' else './temp'
+        unique_temp_dir = os.path.join(base_temp_dir, f'video_processing_{self.execution_id}')
+        os.makedirs(unique_temp_dir, exist_ok=True)
+        return unique_temp_dir
+
     def get_images_from_event(self) -> List[str]:
         try:
             print("Getting images from event...")
@@ -64,10 +84,8 @@ class VideoProcessor:
 
             print(f"Parsed bucket name: {bucket_name}, prefix: {prefix}")
             
-            temp_dir = '/tmp' if ENVIRONMENT != 'local' else './temp'
-            images_dir = os.path.join(temp_dir, 'user_images')
-            if not os.path.exists(images_dir):
-                os.makedirs(images_dir)
+            if not os.path.exists(self.images_dir):
+                os.makedirs(self.images_dir)
 
             print(f"Listing objects from bucket: {bucket_name}, prefix: {prefix}")
             image_objects = []
@@ -82,7 +100,7 @@ class VideoProcessor:
 
             def download_image(obj):
                 print(f"Downloading image: {obj['Key']}")
-                local_path = os.path.join(images_dir, os.path.basename(obj['Key']))
+                local_path = os.path.join(self.images_dir, os.path.basename(obj['Key']))
                 self.s3_client.download_file(bucket_name, obj['Key'], local_path)
                 self.temp_files.append(local_path)
                 return local_path
@@ -113,18 +131,30 @@ class VideoProcessor:
         self, template_clip: Dict, image_paths: List[str], temp_dir: str
     ) -> str:
         try:
+            # Save template in videos directory
             template_path = os.path.join(
-                temp_dir, f"template_{os.path.basename(template_clip['link'])}"
+                self.videos_dir, f"template_{os.path.basename(template_clip['link'])}"
             )
             self.s3_client.download_file(
                 BUCKET_NAME, template_clip["link"], template_path
             )
             self.temp_files.append(template_path)
 
-            rotation_config = template_clip["metadata"]["rotation"]
-            output_path = os.path.join(
-                temp_dir, f"processed_{os.path.basename(template_clip['link'])}"
+            # Use temp_files_dir for intermediate files
+            image_video_output = os.path.join(
+                self.temp_files_dir, 
+                f"image_video_{os.path.splitext(os.path.basename(template_clip['link']))[0]}.mp4"
             )
+            self.temp_files.append(image_video_output)
+
+            # Save final output in videos directory
+            output_path = os.path.join(
+                self.videos_dir, 
+                f"processed_{os.path.basename(template_clip['link'])}"
+            )
+            self.temp_files.append(output_path)
+
+            rotation_config = template_clip["metadata"]["rotation"]
 
             # Validar número de imagens
             num_images = len(image_paths)
@@ -310,12 +340,13 @@ class VideoProcessor:
 
     def process_videos(self, final_video_order: List[Dict]) -> str:
         print("Processing videos...")
-        temp_dir = "/tmp" if ENVIRONMENT != "local" else "./temp"
-        if not os.path.exists(temp_dir):
-            os.makedirs(temp_dir)
-
+        
+        # Use temp_files_dir instead of /tmp
         concat_file = NamedTemporaryFile(
-            mode="w+", suffix=".txt", delete=False, dir=temp_dir
+            mode="w+", 
+            suffix=".txt", 
+            delete=False, 
+            dir=self.temp_files_dir
         )
         self.temp_files.append(concat_file.name)
 
@@ -360,7 +391,7 @@ class VideoProcessor:
                     VERTICAL_SPACING = 140
 
                     temp_path = os.path.join(
-                        temp_dir, f"{index}_{clip_type}_{os.path.basename(clip['link'])}"
+                        self.temp_files_dir, f"{index}_{clip_type}_{os.path.basename(clip['link'])}"
                     )
                     self.s3_client.download_file(BUCKET_NAME, clip["link"], temp_path)
                     
@@ -388,8 +419,8 @@ class VideoProcessor:
                     filter_complex = ','.join(text_filters)
                     
                     # Define all output paths
-                    temp_output_path = os.path.join(temp_dir, f"temp_text_{os.path.basename(clip['link'])}")
-                    final_path = os.path.join(temp_dir, f"processed_final_{index}_{os.path.basename(clip['link'])}")
+                    temp_output_path = os.path.join(self.temp_files_dir, f"temp_text_{os.path.basename(clip['link'])}")
+                    final_path = os.path.join(self.temp_files_dir, f"processed_final_{index}_{os.path.basename(clip['link'])}")
 
                     # First command - Apply text
                     text_command = [
@@ -457,11 +488,11 @@ class VideoProcessor:
                     return None
 
                 # Processar template
-                return index, self.process_template_with_images(clip, image_paths, temp_dir)
+                return index, self.process_template_with_images(clip, image_paths, self.temp_files_dir)
             else:
                 # Processar outros tipos de clipe
                 temp_path = os.path.join(
-                    temp_dir, f"{index}_{clip_type}_{os.path.basename(clip['link'])}"
+                    self.temp_files_dir, f"{index}_{clip_type}_{os.path.basename(clip['link'])}"
                 )
                 self.s3_client.download_file(BUCKET_NAME, clip["link"], temp_path)
                 return index, temp_path
@@ -496,12 +527,13 @@ class VideoProcessor:
 
     def merge_videos(self, concat_file_path: str) -> str:
         print("Merging videos...")
-        temp_output = NamedTemporaryFile(suffix='_temp.mp4', delete=False)
-        final_output = NamedTemporaryFile(suffix='_final.mp4', delete=False)
-        self.temp_files.extend([temp_output.name, final_output.name])
+        # Use temp_files_dir for temporary outputs
+        temp_output = os.path.join(self.temp_files_dir, f'temp_{self.execution_id}.mp4')
+        final_output = os.path.join(self.temp_files_dir, f'final_{self.execution_id}.mp4')
+        self.temp_files.extend([temp_output, final_output])
 
-        # Download audio file
-        audio_path = '/tmp/audio.mp3' if ENVIRONMENT != 'local' else './temp/audio.mp3'
+        # Download audio file to temp_files_dir
+        audio_path = os.path.join(self.temp_files_dir, 'audio.mp3')
         print("Downloading audio file...")
         self.s3_client.download_file(BUCKET_NAME, 'audio/audio.mp3', audio_path)
         self.temp_files.append(audio_path)
@@ -518,7 +550,7 @@ class VideoProcessor:
             '-threads', 'auto',
             '-tune', 'fastdecode',
             '-an',  # Remove any existing audio
-            temp_output.name
+            temp_output
         ]
 
         print("Executing merge command...")
@@ -531,14 +563,14 @@ class VideoProcessor:
             print("Adding audio to video...")
             audio_cmd = [
                 self.ffmpeg_path,
-                '-i', temp_output.name,
+                '-i', temp_output,
                 '-i', audio_path,
                 '-c:v', 'copy',            # Copy video without re-encoding
                 '-c:a', 'aac',             # Use AAC codec for audio
                 '-map', '0:v:0',           # Map video from first input
                 '-map', '1:a:0',           # Map audio from second input
                 '-y',                      # Overwrite output file if exists
-                final_output.name
+                final_output
             ]
             
             result = subprocess.run(audio_cmd, capture_output=True, text=True, check=True)
@@ -549,7 +581,7 @@ class VideoProcessor:
             print(f"Error in video processing: {e.stderr}")
             raise Exception(f"Failed to process video: {e.stderr}")
 
-        return final_output.name
+        return final_output
 
     def cleanup(self):
         print("Cleaning up temporary files...")
@@ -591,477 +623,5 @@ def lambda_handler(event, context):
     processor = VideoProcessor(event)
     return processor.process()
 
-mockInput = {
-    "videoConfig": {
-        "trackOrder": [
-            "initial",
-            "template",
-            "card",
-            "template",
-            "card",
-            "template",
-            "card",
-            "template",
-            "card",
-            "template",
-            "final"
-        ],
-        "uploadedResources": {
-            "bucketKey": "s3://retrospet-photos-users/users_photos/test",
-            "folderId": "9d91b9ad-be6b-40fd-9a11-152cc6f55c87"
-        },
-        "textOptions": {
-            "firstLine": "Diogo, asdasdsads",
-            "secondLine": "sadasdsada, sadasdsads",
-            "thirdLine": "& sadasdasda"
-        }
-    },
-    "static": {
-        "initial": {
-            "refId": "initial",
-            "quantity": 2,
-            "clips": [
-                {
-                    "link": "static/initial/capa.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "initial"
-                    }
-                },
-                {
-                    "link": "static/initial/nome_pet_e_dono.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "initial"
-                    }
-                }
-            ],
-            "ordened": 1
-        },
-        "cards": {
-            "refId": "card",
-            "quantity": 5,
-            "clips": [
-                {
-                    "link": "static/cartelas/cao/VerdeClaro-01.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "card"
-                    }
-                },
-                {
-                    "link": "static/cartelas/cao/VerdeEscuro-08.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "card"
-                    }
-                },
-                {
-                    "link": "static/cartelas/cao/VerdeClaro-06.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "card"
-                    }
-                },
-                {
-                    "link": "static/cartelas/cao/VerdeEscuro-02.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "card"
-                    }
-                },
-                {
-                    "link": "static/cartelas/cao/VerdeClaro-05.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "card"
-                    }
-                }
-            ],
-            "ordened": 0
-        },
-        "templates": {
-            "refId": "template",
-            "quantity": 5,
-            "clips": [
-                {
-                    "link": "static/templates/FundoFotoVerdeEscuro-06.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "template",
-                        "rotation": {
-                            "width": 878,
-                            "height": 870,
-                            "rotation": 1,
-                            "x": 97,
-                            "y": 457
-                        },
-                        "initialTimestamp": 6
-                    }
-                },
-                {
-                    "link": "static/templates/FundoFotoVerdeEscuro-03.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "template",
-                        "rotation": {
-                            "width": 900,
-                            "height": 720,
-                            "rotation": 3,
-                            "x": 98,
-                            "y": 560
-                        },
-                        "initialTimestamp": 15
-                    }
-                },
-                {
-                    "link": "static/templates/FundoFotoVerdeEscuro-02.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "template",
-                        "rotation": {
-                            "width": 800,
-                            "height": 1060,
-                            "rotation": 2.2,
-                            "x": 129,
-                            "y": 369
-                        },
-                        "initialTimestamp": 24
-                    }
-                },
-                {
-                    "link": "static/templates/FundoFotoVerdeEscuro-01.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "template",
-                        "rotation": {
-                            "width": 900,
-                            "height": 900,
-                            "rotation": 1.7,
-                            "x": 85,
-                            "y": 447
-                        },
-                        "initialTimestamp": 30
-                    }
-                },
-                {
-                    "link": "static/templates/FundoFotoVerdeMedio-06.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "template",
-                        "rotation": {
-                            "width": 878,
-                            "height": 870,
-                            "rotation": 1,
-                            "x": 97,
-                            "y": 457
-                        },
-                        "initialTimestamp": 39
-                    }
-                }
-            ],
-            "ordened": 0
-        },
-        "final": {
-            "refId": "final",
-            "quantity": 3,
-            "clips": [
-                {
-                    "link": "static/final/final_step_1.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "final"
-                    }
-                },
-                {
-                    "link": "static/final/final_step_2.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "final"
-                    }
-                },
-                {
-                    "link": "static/final/final_step_3.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "asdasdsads",
-                                "type": "GATO"
-                            },
-                            {
-                                "name": "sadasdsada",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdsads",
-                                "type": "CAO"
-                            },
-                            {
-                                "name": "sadasdasda",
-                                "type": "CAO"
-                            }
-                        ],
-                        "clipType": "final"
-                    }
-                }
-            ],
-            "ordened": 1
-        }
-    }
-}
-
-if __name__ == "__main__":
-    lambda_handler(mockInput, None)
+# if __name__ == "__main__":
+#     lambda_handler(mockInput, None)
