@@ -13,7 +13,7 @@ import uuid
 
 FFMPEG_LAYER_PATH = '/opt/bin/ffmpeg'
 FFMPEG_LAYER_PATH_WITH_DRAW_TEXT = '/opt/bin/ffmpeg2'
-FFMPEG_LAYER_PATH_LOCAL = "ffmpeg"
+FFMPEG_LAYER_PATH_LOCAL = "/usr/bin/ffmpeg"
 ENVIRONMENT = 'production'  # production | local
 BUCKET_NAME = 'photos-processing'
 OUTPUT_BUCKET_NAME = 'retrospet-photos-users'
@@ -532,10 +532,12 @@ class VideoProcessor:
         final_output = os.path.join(self.temp_files_dir, f'final_{self.execution_id}.mp4')
         self.temp_files.extend([temp_output, final_output])
 
-        # Download audio file to temp_files_dir
-        audio_path = os.path.join(self.temp_files_dir, 'audio.mp3')
-        print("Downloading audio file...")
-        self.s3_client.download_file(BUCKET_NAME, 'audio/audio.mp3', audio_path)
+        # Get audio path from videoConfig, fallback to default if not provided
+        audio_key = self.event['videoConfig'].get('audio', 'audio/audio.mp3')
+        audio_path = os.path.join(self.temp_files_dir, os.path.basename(audio_key))
+        
+        print(f"Downloading audio file from {audio_key}...")
+        self.s3_client.download_file(BUCKET_NAME, audio_key, audio_path)
         self.temp_files.append(audio_path)
 
         # First merge videos without audio
