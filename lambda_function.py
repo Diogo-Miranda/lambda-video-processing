@@ -10,6 +10,7 @@ import concurrent.futures
 from botocore.config import Config
 from PIL import Image
 import uuid
+import math
 
 FFMPEG_LAYER_PATH = '/opt/bin/ffmpeg'
 FFMPEG_LAYER_PATH_WITH_DRAW_TEXT = '/opt/bin/ffmpeg2'
@@ -140,68 +141,121 @@ class VideoProcessor:
             )
             self.temp_files.append(template_path)
 
-            # Use temp_files_dir for intermediate files
+            # Create directory for processed images
+            processed_images_dir = os.path.join(self.temp_files_dir, f'processed_images_{uuid.uuid4()}')
+            os.makedirs(processed_images_dir, exist_ok=True)
+            
+            rotation_config = template_clip["metadata"]["rotation"]
+            processed_image_paths = []
+            
+            # Define background color (hex #e9e7e9)
+            bg_color = (233, 231, 233, 255)  # RGB + Alpha values for #e9e7e9
+
+            # Pre-process each image with rotation
+            for idx, image_path in enumerate(image_paths):
+                processed_image_path = os.path.join(processed_images_dir, f"processed_image_{idx}.png")
+                
+                with Image.open(image_path).convert("RGBA") as img:
+                    # Calculate scaling factor to fit image within target dimensions
+                    # while preserving aspect ratio
+                    target_width = rotation_config['width']
+                    target_height = rotation_config['height']
+                    
+                    # Calculate scaling ratios
+                    width_ratio = target_width / img.width
+                    height_ratio = target_height / img.height
+                    
+                    # Use the smaller ratio to ensure image fits within bounds
+                    scale_factor = min(width_ratio, height_ratio)
+                    
+                    # Calculate new dimensions
+                    new_width = int(img.width * scale_factor)
+                    new_height = int(img.height * scale_factor)
+                    
+                    # Resize image while preserving aspect ratio
+                    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+                    
+                    # Create new image with specified background color using target dimensions
+                    final_img = Image.new('RGBA', (target_width, target_height), bg_color)
+                    
+                    # Calculate center position to paste resized image
+                    paste_x = (target_width - new_width) // 2
+                    paste_y = (target_height - new_height) // 2
+                    
+                    # Paste resized image centrally
+                    final_img.paste(img, (paste_x, paste_y), img)
+                    
+                    # Apply rotation if needed
+                    if rotation_config.get('rotation', 0) != 0:
+                        # Create larger image for rotation with specified background color
+                        diagonal = int(math.sqrt(target_width**2 + target_height**2))
+                        rot_img = Image.new('RGBA', (diagonal, diagonal), bg_color)
+                        
+                        # Paste image in rotation area center
+                        paste_x = (diagonal - target_width) // 2
+                        paste_y = (diagonal - target_height) // 2
+                        rot_img.paste(final_img, (paste_x, paste_y), final_img)
+                        
+                        # Apply rotation
+                        rotated = rot_img.rotate(
+                            rotation_config['rotation'],
+                            resample=Image.Resampling.BICUBIC,
+                            expand=False,
+                            center=(diagonal//2, diagonal//2)
+                        )
+                        
+                        # Crop back to original size
+                        final_img = rotated.crop((
+                            paste_x,
+                            paste_y,
+                            paste_x + target_width,
+                            paste_y + target_height
+                        ))
+                    
+                    # Save with high quality
+                    final_img.save(
+                        processed_image_path,
+                        format="PNG",
+                        optimize=True,
+                        quality=95
+                    )
+                    
+                    processed_image_paths.append(processed_image_path)
+                    self.temp_files.append(processed_image_path)
+
+            # Rest of the video processing using processed images
             image_video_output = os.path.join(
                 self.temp_files_dir, 
                 f"image_video_{os.path.splitext(os.path.basename(template_clip['link']))[0]}.mp4"
             )
             self.temp_files.append(image_video_output)
 
-            # Save final output in videos directory
             output_path = os.path.join(
                 self.videos_dir, 
                 f"processed_{os.path.basename(template_clip['link'])}"
             )
             self.temp_files.append(output_path)
 
-            rotation_config = template_clip["metadata"]["rotation"]
+            # Calculate duration per image
+            num_images = len(processed_image_paths)
+            total_duration = 6
+            duration_per_image = total_duration // num_images if num_images <= 2 else total_duration / num_images
 
-            # Validar número de imagens
-            num_images = len(image_paths)
-
-            # Calcular duração por imagem
-            total_duration = 6  # Duração total do bloco de mídia em segundos
-            if num_images <= 2:
-                duration_per_image = (
-                    total_duration // num_images
-                )  # 3s por imagem para 2 fotos
-            else:
-                duration_per_image = (
-                    total_duration / num_images
-                )  # 0.5s por imagem para 12 fotos
-
-            # Criar vídeo com as imagens
+            # Create video from processed images
             filter_complex_parts = []
-            for idx, image_path in enumerate(image_paths):
-                image_output_path = os.path.join(temp_dir, f"image_{idx}.png")
+            for idx, _ in enumerate(processed_image_paths):
+                filter_complex_parts.append(f"[{idx}:v]setsar=1[v{idx}]")
 
-                # Calcular dimensões mantendo a proporção
-                target_w = rotation_config['width']
-                target_h = rotation_config['height']
-
-                # Adicionar entrada ao filtro complexo com scale que preserva proporção
-                filter_complex_parts.append(
-                    f"[{idx}:v]scale=w={target_w}:h={target_h}:force_original_aspect_ratio=decrease,"
-                    f"pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2:color=#E9E7E9@1,"
-                    f"setsar=1[v{idx}]"
-                )
-
-            # Construir o filtro complexo para concatenação
             concat_filter = (
                 ";".join(filter_complex_parts)
-                + f";{''.join(f'[v{idx}]' for idx in range(len(image_paths)))}concat=n={len(image_paths)}:v=1:a=0[outv]"
+                + f";{''.join(f'[v{idx}]' for idx in range(len(processed_image_paths)))}concat=n={len(processed_image_paths)}:v=1:a=0[outv]"
             )
 
-            # Comando FFmpeg para criar vídeo
             ffmpeg_inputs = []
-            for image_path in image_paths:
-                ffmpeg_inputs.extend(
-                    ["-loop", "1", "-t", str(duration_per_image), "-i", image_path]
-                )
+            for image_path in processed_image_paths:
+                ffmpeg_inputs.extend(["-loop", "1", "-t", str(duration_per_image), "-i", image_path])
 
-            template_id = os.path.splitext(os.path.basename(template_clip['link']))[0]
-            image_video_output = os.path.join(temp_dir, f"image_video_{template_id}.mp4")
-            
+            # Create video from processed images
             ffmpeg_command = [
                 self.ffmpeg_path,
                 *ffmpeg_inputs,
@@ -212,11 +266,11 @@ class VideoProcessor:
                 "-c:v",
                 "libx264",
                 "-preset",
-                "ultrafast",  # Mudado de 'medium' para 'ultrafast'
+                "ultrafast",
                 "-tune",
-                "fastdecode",  # Adicionado para otimizar decodificação
+                "fastdecode",
                 "-threads",
-                "auto",  # Permite que o FFmpeg gerencie as threads
+                "auto",
                 "-pix_fmt",
                 "yuv420p",
                 "-y",
@@ -224,7 +278,7 @@ class VideoProcessor:
             ]
             subprocess.run(ffmpeg_command, check=True)
 
-            # Sobrepor o vídeo gerado no template
+            # Overlay the generated video on template
             x_position = rotation_config["x"]
             y_position = rotation_config["y"]
             ffmpeg_process = subprocess.Popen(
@@ -241,11 +295,11 @@ class VideoProcessor:
                     "-c:v",
                     "libx264",
                     "-preset",
-                    "ultrafast",  # Mudado para ultrafast
+                    "ultrafast",
                     "-tune",
-                    "fastdecode",  # Otimização para decodificação
+                    "fastdecode",
                     "-threads",
-                    "auto",  # Gerenciamento automático de threads
+                    "auto",
                     "-pix_fmt",
                     "yuv420p",
                     "-movflags",
@@ -258,7 +312,7 @@ class VideoProcessor:
 
             stdout, stderr = ffmpeg_process.communicate()
             if ffmpeg_process.returncode != 0:
-                print(f"Erro ao processar o vídeo {output_path}: {stderr.decode()}")
+                print(f"Error processing video {output_path}: {stderr.decode()}")
 
             return output_path
         except Exception as e:
@@ -533,7 +587,7 @@ class VideoProcessor:
         self.temp_files.extend([temp_output, final_output])
 
         # Get audio path from videoConfig, fallback to default if not provided
-        audio_key = self.event['videoConfig'].get('audio', 'audio/audio.mp3')
+        audio_key = self.event['videoConfig'].get('audio', 'audio/audio1.mp3')
         audio_path = os.path.join(self.temp_files_dir, os.path.basename(audio_key))
         
         print(f"Downloading audio file from {audio_key}...")
@@ -625,5 +679,5 @@ def lambda_handler(event, context):
     processor = VideoProcessor(event)
     return processor.process()
 
-# if __name__ == "__main__":
-#     lambda_handler(mockInput, None)
+if __name__ == "__main__":
+    lambda_handler(mockInput, None)
