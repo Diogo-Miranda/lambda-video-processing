@@ -11,11 +11,12 @@ from botocore.config import Config
 from PIL import Image
 import uuid
 import math
+from PIL import ImageFilter
 
 FFMPEG_LAYER_PATH = '/opt/bin/ffmpeg'
 FFMPEG_LAYER_PATH_WITH_DRAW_TEXT = '/opt/bin/ffmpeg2'
 FFMPEG_LAYER_PATH_LOCAL = "/usr/bin/ffmpeg"
-ENVIRONMENT = 'production'  # production | local
+ENVIRONMENT = 'local'  # production | local
 BUCKET_NAME = 'photos-processing'
 OUTPUT_BUCKET_NAME = 'retrospet-photos-users'
 
@@ -172,7 +173,7 @@ class VideoProcessor:
                     new_width = int(img.width * scale_factor)
                     new_height = int(img.height * scale_factor)
                     
-                    # Resize image while preserving aspect ratio
+                    # Resize image with high-quality resampling
                     img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
                     
                     # Create new image with specified background color using target dimensions
@@ -187,8 +188,9 @@ class VideoProcessor:
                     
                     # Apply rotation if needed
                     if rotation_config.get('rotation', 0) != 0:
-                        # Create larger image for rotation with specified background color
-                        diagonal = int(math.sqrt(target_width**2 + target_height**2))
+                        # Create larger image for rotation with padding
+                        # Increase size by 20% to avoid edge artifacts
+                        diagonal = int(math.sqrt(target_width**2 + target_height**2) * 1.2)
                         rot_img = Image.new('RGBA', (diagonal, diagonal), bg_color)
                         
                         # Paste image in rotation area center
@@ -196,15 +198,20 @@ class VideoProcessor:
                         paste_y = (diagonal - target_height) // 2
                         rot_img.paste(final_img, (paste_x, paste_y), final_img)
                         
-                        # Apply rotation
+                        # Apply rotation with improved quality
                         rotated = rot_img.rotate(
                             rotation_config['rotation'],
-                            resample=Image.Resampling.BICUBIC,
+                            resample=Image.Resampling.BICUBIC,  # Use BICUBIC for better quality
                             expand=False,
-                            center=(diagonal//2, diagonal//2)
+                            center=(diagonal//2, diagonal//2),
+                            fillcolor=bg_color
                         )
                         
-                        # Crop back to original size
+                        # Apply slight Gaussian blur to reduce jagged edges
+                        if hasattr(rotated, 'filter'):
+                            rotated = rotated.filter(ImageFilter.GaussianBlur(radius=0.5))
+                        
+                        # Crop back to original size with adjusted position
                         final_img = rotated.crop((
                             paste_x,
                             paste_y,
@@ -212,12 +219,12 @@ class VideoProcessor:
                             paste_y + target_height
                         ))
                     
-                    # Save with high quality
+                    # Save with maximum quality
                     final_img.save(
                         processed_image_path,
                         format="PNG",
                         optimize=True,
-                        quality=95
+                        quality=100  # Maximum quality
                     )
                     
                     processed_image_paths.append(processed_image_path)
@@ -289,15 +296,15 @@ class VideoProcessor:
                     "-i",
                     image_video_output,
                     "-filter_complex",
-                    f"[0:v][1:v]overlay=x={x_position}:y={y_position}:format=auto[outv]",
+                    f"[0:v][1:v]overlay=x={x_position}:y={y_position}:format=rgb[outv]",
                     "-map",
                     "[outv]",
                     "-c:v",
                     "libx264",
                     "-preset",
-                    "ultrafast",
-                    "-tune",
-                    "fastdecode",
+                    "faster",
+                    "-crf",
+                    "17",
                     "-threads",
                     "auto",
                     "-pix_fmt",
@@ -594,17 +601,16 @@ class VideoProcessor:
         self.s3_client.download_file(BUCKET_NAME, audio_key, audio_path)
         self.temp_files.append(audio_path)
 
-        # First merge videos without audio
+        # First merge videos without audio - improved quality settings
         merge_cmd = [
             self.ffmpeg_path, '-y', '-f', 'concat', '-safe', '0',
             '-i', concat_file_path,
             '-c:v', 'libx264',
-            '-crf', '28',
-            '-preset', 'veryfast',
+            '-crf', '17',  # Lower CRF for better quality
+            '-preset', 'faster',  # Highest quality preset
             '-pix_fmt', 'yuv420p',
             '-movflags', '+faststart',
             '-threads', 'auto',
-            '-tune', 'fastdecode',
             '-an',  # Remove any existing audio
             temp_output
         ]
@@ -678,6 +684,297 @@ class VideoProcessor:
 def lambda_handler(event, context):
     processor = VideoProcessor(event)
     return processor.process()
+
+mockInput = {
+    "videoConfig": {
+        "trackOrder": [
+            "initial",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "card",
+            "template",
+            "final"
+        ],
+        "uploadedResources": {
+            "bucketKey": "retrospet-photos-users/users_photos/79e53146-022b-4a92-8fe3-6d8e69f059b2",
+            "folderId": "79e53146-022b-4a92-8fe3-6d8e69f059b2"
+        },
+        "textOptions": {
+            "firstLine": "Diogo & Diogo"
+        },
+        "audio": "audio/audio5.mp3"
+    },
+    "static": {
+        "initial": {
+            "refId": "initial",
+            "quantity": 2,
+            "clips": [
+                {
+                    "link": "static/initial/capa.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "initial"
+                    }
+                },
+                {
+                    "link": "static/initial/nome_pet_e_dono.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "initial"
+                    }
+                }
+            ],
+            "ordened": 1
+        },
+        "cards": {
+            "refId": "card",
+            "quantity": 5,
+            "clips": [
+                {
+                    "link": "static/cartelas/variacao3/STEP04.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/variacao3/STEP05.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/variacao3/STEP06.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/variacao3/STEP03.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                },
+                {
+                    "link": "static/cartelas/variacao3/STEP07.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "card"
+                    }
+                }
+            ],
+            "ordened": 0
+        },
+        "templates": {
+            "refId": "template",
+            "quantity": 5,
+            "clips": [
+                {
+                    "link": "static/templates/FundoFotoVerdeClaro-03.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 720,
+                            "rotation": 3,
+                            "x": 96,
+                            "y": 557
+                        },
+                        "initialTimestamp": 6
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeClaro-05.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 868,
+                            "height": 1108,
+                            "rotation": -3.6,
+                            "x": 111,
+                            "y": 325
+                        },
+                        "initialTimestamp": 15
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeMedio-02.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 814,
+                            "height": 1074,
+                            "rotation": 2.2,
+                            "x": 121,
+                            "y": 367
+                        },
+                        "initialTimestamp": 24
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeClaro-04.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 900,
+                            "height": 900,
+                            "rotation": 1.5,
+                            "x": 90,
+                            "y": 426
+                        },
+                        "initialTimestamp": 30
+                    }
+                },
+                {
+                    "link": "static/templates/FundoFotoVerdeMedio-05.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "template",
+                        "rotation": {
+                            "width": 868,
+                            "height": 1108,
+                            "rotation": -3.6,
+                            "x": 111,
+                            "y": 325
+                        },
+                        "initialTimestamp": 39
+                    }
+                }
+            ],
+            "ordened": 0
+        },
+        "final": {
+            "refId": "final",
+            "quantity": 3,
+            "clips": [
+                {
+                    "link": "static/final/final_step_1.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                },
+                {
+                    "link": "static/final/final_step_2.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                },
+                {
+                    "link": "static/final/final_step_3.mp4",
+                    "type": "video",
+                    "metadata": {
+                        "pets": [
+                            {
+                                "name": "Diogo",
+                                "type": "GATO"
+                            }
+                        ],
+                        "clipType": "final"
+                    }
+                }
+            ],
+            "ordened": 1
+        }
+    }
+}
 
 if __name__ == "__main__":
     lambda_handler(mockInput, None)
