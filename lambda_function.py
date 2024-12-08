@@ -11,7 +11,7 @@ from botocore.config import Config
 from PIL import Image
 import uuid
 import math
-from PIL import ImageFilter
+from PIL import ImageFilter, ImageOps
 
 FFMPEG_LAYER_PATH = '/opt/bin/ffmpeg'
 FFMPEG_LAYER_PATH_WITH_DRAW_TEXT = '/opt/bin/ffmpeg2'
@@ -130,47 +130,47 @@ class VideoProcessor:
 
     def preprocess_image(self, img: Image, rotation_config: Dict, bg_color: tuple) -> Image:
         """
-        Pre-process an image with rotation and scaling according to configuration.
-        Ensures image fits within maximum dimensions while maintaining aspect ratio,
-        with a 100-pixel safety margin.
-        
-        Args:
-            img: PIL Image object to process
-            rotation_config: Dictionary containing width, height, and rotation parameters
-            bg_color: Tuple of (R,G,B,A) values for background color
-            
-        Returns:
-            Processed PIL Image object
+        Pre-process an image while preserving aspect ratio, adding borders if needed.
+        Includes a safety margin to prevent edge cropping during rotation.
         """
-        # Get maximum dimensions from rotation config with safety margin
-        SAFETY_MARGIN = 100
-        max_width = rotation_config['width'] - SAFETY_MARGIN
-        max_height = rotation_config['height'] - SAFETY_MARGIN
+        # First handle EXIF orientation
+        img = ImageOps.exif_transpose(img)
+        
+        # Get target dimensions from rotation config
+        target_width = rotation_config['width']
+        target_height = rotation_config['height']
+        
+        # Apply safety margin (95% of target size)
+        safety_margin = 0.95  # 5% margin
+        safe_width = int(target_width * safety_margin)
+        safe_height = int(target_height * safety_margin)
         
         # Get current image dimensions
         current_width = img.width
         current_height = img.height
         
-        # Calculate scaling ratios (always scale to fit within safety margins)
-        width_ratio = max_width / current_width
-        height_ratio = max_height / current_height
+        # Calculate aspect ratios using safe dimensions
+        target_ratio = safe_width / safe_height
+        image_ratio = current_width / current_height
         
-        # Use the smaller ratio to ensure image fits within bounds
-        scale_factor = min(width_ratio, height_ratio)
+        if image_ratio > target_ratio:
+            # Image is wider than target - fit to safe width
+            new_width = safe_width
+            new_height = int(safe_width / image_ratio)
+        else:
+            # Image is taller than target - fit to safe height
+            new_height = safe_height
+            new_width = int(safe_height * image_ratio)
         
-        # Calculate new dimensions
-        new_width = int(current_width * scale_factor)
-        new_height = int(current_height * scale_factor)
-        
-        # Resize image with high-quality resampling
+        # Resize image maintaining aspect ratio
         img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
         
-        # Create new image with original target dimensions
-        final_img = Image.new('RGBA', (rotation_config['width'], rotation_config['height']), bg_color)
+        # Create new image with target dimensions and background color
+        final_img = Image.new('RGBA', (target_width, target_height), bg_color)
         
-        # Calculate center position to paste resized image
-        paste_x = (rotation_config['width'] - new_width) // 2
-        paste_y = (rotation_config['height'] - new_height) // 2
+        # Calculate position to paste resized image centered
+        paste_x = (target_width - new_width) // 2
+        paste_y = (target_height - new_height) // 2
         
         # Paste resized image centrally
         final_img.paste(img, (paste_x, paste_y), img)
