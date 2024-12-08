@@ -322,9 +322,9 @@ class VideoProcessor:
                     "-c:v",
                     "libx264",
                     "-preset",
-                    "faster",
-                    "-crf",
-                    "17",
+                    "ultrafast",
+                    "-tune",
+                    "fastdecode",
                     "-threads",
                     "auto",
                     "-pix_fmt",
@@ -625,8 +625,8 @@ class VideoProcessor:
             self.ffmpeg_path, '-y', '-f', 'concat', '-safe', '0',
             '-i', concat_file_path,
             '-c:v', 'libx264',
-            '-crf', '17',  # Lower CRF for better quality
-            '-preset', 'faster',  # Highest quality preset
+            '-crf', '28',
+            '-preset', 'veryfast',
             '-pix_fmt', 'yuv420p',
             '-movflags', '+faststart',
             '-threads', 'auto',
@@ -703,6 +703,8 @@ class VideoProcessor:
 def lambda_handler(event, context):
     processor = VideoProcessor(event)
     return processor.process()
+
+# mockInput = {"videoConfig":{"trackOrder":["initial","template","card","template","card","template","card","template","card","template","final"],"uploadedResources":{"bucketKey":"retrospet-photos-users/users_photos/9700896b-fddf-4541-a561-f57677cb99f7","folderId":"9700896b-fddf-4541-a561-f57677cb99f7"},"textOptions":{"firstLine":"giovana & Alice"},"audio":"audio/audio2.mp3"},"static":{"initial":{"refId":"initial","quantity":2,"clips":[{"link":"static/initial/capa.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"initial"}},{"link":"static/initial/nome_pet_e_dono.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"initial"}}],"ordened":1},"cards":{"refId":"card","quantity":5,"clips":[{"link":"static/cartelas/variacao2/STEP03.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"card"}},{"link":"static/cartelas/variacao2/STEP07.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"card"}},{"link":"static/cartelas/variacao2/STEP04.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"card"}},{"link":"static/cartelas/variacao2/STEP08.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"card"}},{"link":"static/cartelas/variacao2/STEP06.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"card"}}],"ordened":0},"templates":{"refId":"template","quantity":5,"clips":[{"link":"static/templates/FundoFotoVerdeMedio-01.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"template","rotation":{"width":930,"height":930,"rotation":1.7,"x":81,"y":439},"initialTimestamp":6}},{"link":"static/templates/FundoFotoVerdeClaro-05.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"template","rotation":{"width":864,"height":1114,"rotation":-3.6,"x":107.8,"y":315},"initialTimestamp":15}},{"link":"static/templates/FundoFotoVerdeClaro-03.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"template","rotation":{"width":890,"height":724,"rotation":3,"x":93,"y":555},"initialTimestamp":24}},{"link":"static/templates/FundoFotoVerdeEscuro-05.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"template","rotation":{"width":864,"height":1114,"rotation":-3.6,"x":107.8,"y":315},"initialTimestamp":30}},{"link":"static/templates/FundoFotoVerdeMedio-02.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"template","rotation":{"width":814,"height":1078,"rotation":2.2,"x":119,"y":365},"initialTimestamp":39}}],"ordened":0},"final":{"refId":"final","quantity":3,"clips":[{"link":"static/final/final_step_1.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"final"}},{"link":"static/final/final_step_2.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"final"}},{"link":"static/final/final_step_3.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"final"}}],"ordened":1}}}
 
 # if __name__ == "__main__":
 #     lambda_handler(mockInput, None)
