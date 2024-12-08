@@ -16,7 +16,7 @@ from PIL import ImageFilter
 FFMPEG_LAYER_PATH = '/opt/bin/ffmpeg'
 FFMPEG_LAYER_PATH_WITH_DRAW_TEXT = '/opt/bin/ffmpeg2'
 FFMPEG_LAYER_PATH_LOCAL = "/usr/bin/ffmpeg"
-ENVIRONMENT = 'local'  # production | local
+ENVIRONMENT = 'production'  # production | local
 BUCKET_NAME = 'photos-processing'
 OUTPUT_BUCKET_NAME = 'retrospet-photos-users'
 
@@ -128,6 +128,86 @@ class VideoProcessor:
             print(f"Error in get_images_from_event: {str(e)}")
             raise
 
+    def preprocess_image(self, img: Image, rotation_config: Dict, bg_color: tuple) -> Image:
+        """
+        Pre-process an image with rotation and scaling according to configuration.
+        Ensures image fits within maximum dimensions while maintaining aspect ratio,
+        with a 100-pixel safety margin.
+        
+        Args:
+            img: PIL Image object to process
+            rotation_config: Dictionary containing width, height, and rotation parameters
+            bg_color: Tuple of (R,G,B,A) values for background color
+            
+        Returns:
+            Processed PIL Image object
+        """
+        # Get maximum dimensions from rotation config with safety margin
+        SAFETY_MARGIN = 100
+        max_width = rotation_config['width'] - SAFETY_MARGIN
+        max_height = rotation_config['height'] - SAFETY_MARGIN
+        
+        # Get current image dimensions
+        current_width = img.width
+        current_height = img.height
+        
+        # Calculate scaling ratios (always scale to fit within safety margins)
+        width_ratio = max_width / current_width
+        height_ratio = max_height / current_height
+        
+        # Use the smaller ratio to ensure image fits within bounds
+        scale_factor = min(width_ratio, height_ratio)
+        
+        # Calculate new dimensions
+        new_width = int(current_width * scale_factor)
+        new_height = int(current_height * scale_factor)
+        
+        # Resize image with high-quality resampling
+        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Create new image with original target dimensions
+        final_img = Image.new('RGBA', (rotation_config['width'], rotation_config['height']), bg_color)
+        
+        # Calculate center position to paste resized image
+        paste_x = (rotation_config['width'] - new_width) // 2
+        paste_y = (rotation_config['height'] - new_height) // 2
+        
+        # Paste resized image centrally
+        final_img.paste(img, (paste_x, paste_y), img)
+        
+        # Apply rotation if needed
+        if rotation_config.get('rotation', 0) != 0:
+            # Create larger image for rotation with padding
+            diagonal = int(math.sqrt(rotation_config['width']**2 + rotation_config['height']**2) * 1.2)
+            rot_img = Image.new('RGBA', (diagonal, diagonal), bg_color)
+            
+            # Paste image in rotation area center
+            paste_x = (diagonal - rotation_config['width']) // 2
+            paste_y = (diagonal - rotation_config['height']) // 2
+            rot_img.paste(final_img, (paste_x, paste_y), final_img)
+            
+            # Apply rotation with improved quality
+            rotated = rot_img.rotate(
+                rotation_config['rotation'],
+                resample=Image.Resampling.BICUBIC,
+                expand=False,
+                center=(diagonal//2, diagonal//2),
+                fillcolor=bg_color
+            )
+            
+            # Apply slight Gaussian blur to reduce jagged edges
+            if hasattr(rotated, 'filter'):
+                rotated = rotated.filter(ImageFilter.GaussianBlur(radius=0.5))
+            
+            # Crop back to original size with adjusted position
+            final_img = rotated.crop((
+                paste_x,
+                paste_y,
+                paste_x + rotation_config['width'],
+                paste_y + rotation_config['height']
+            ))
+        
+        return final_img
 
     def process_template_with_images(
         self, template_clip: Dict, image_paths: List[str], temp_dir: str
@@ -157,74 +237,14 @@ class VideoProcessor:
                 processed_image_path = os.path.join(processed_images_dir, f"processed_image_{idx}.png")
                 
                 with Image.open(image_path).convert("RGBA") as img:
-                    # Calculate scaling factor to fit image within target dimensions
-                    # while preserving aspect ratio
-                    target_width = rotation_config['width']
-                    target_height = rotation_config['height']
-                    
-                    # Calculate scaling ratios
-                    width_ratio = target_width / img.width
-                    height_ratio = target_height / img.height
-                    
-                    # Use the smaller ratio to ensure image fits within bounds
-                    scale_factor = min(width_ratio, height_ratio)
-                    
-                    # Calculate new dimensions
-                    new_width = int(img.width * scale_factor)
-                    new_height = int(img.height * scale_factor)
-                    
-                    # Resize image with high-quality resampling
-                    img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-                    
-                    # Create new image with specified background color using target dimensions
-                    final_img = Image.new('RGBA', (target_width, target_height), bg_color)
-                    
-                    # Calculate center position to paste resized image
-                    paste_x = (target_width - new_width) // 2
-                    paste_y = (target_height - new_height) // 2
-                    
-                    # Paste resized image centrally
-                    final_img.paste(img, (paste_x, paste_y), img)
-                    
-                    # Apply rotation if needed
-                    if rotation_config.get('rotation', 0) != 0:
-                        # Create larger image for rotation with padding
-                        # Increase size by 20% to avoid edge artifacts
-                        diagonal = int(math.sqrt(target_width**2 + target_height**2) * 1.2)
-                        rot_img = Image.new('RGBA', (diagonal, diagonal), bg_color)
-                        
-                        # Paste image in rotation area center
-                        paste_x = (diagonal - target_width) // 2
-                        paste_y = (diagonal - target_height) // 2
-                        rot_img.paste(final_img, (paste_x, paste_y), final_img)
-                        
-                        # Apply rotation with improved quality
-                        rotated = rot_img.rotate(
-                            rotation_config['rotation'],
-                            resample=Image.Resampling.BICUBIC,  # Use BICUBIC for better quality
-                            expand=False,
-                            center=(diagonal//2, diagonal//2),
-                            fillcolor=bg_color
-                        )
-                        
-                        # Apply slight Gaussian blur to reduce jagged edges
-                        if hasattr(rotated, 'filter'):
-                            rotated = rotated.filter(ImageFilter.GaussianBlur(radius=0.5))
-                        
-                        # Crop back to original size with adjusted position
-                        final_img = rotated.crop((
-                            paste_x,
-                            paste_y,
-                            paste_x + target_width,
-                            paste_y + target_height
-                        ))
-                    
+                    final_img = self.preprocess_image(img, rotation_config, bg_color)
+
                     # Save with maximum quality
                     final_img.save(
                         processed_image_path,
                         format="PNG",
                         optimize=True,
-                        quality=100  # Maximum quality
+                        quality=100
                     )
                     
                     processed_image_paths.append(processed_image_path)
@@ -325,7 +345,6 @@ class VideoProcessor:
         except Exception as e:
             print(f"Error processing template video", e)
             raise
-
 
     def setup_ffmpeg(self) -> str:
         print("Setting up FFmpeg...")
@@ -685,296 +704,5 @@ def lambda_handler(event, context):
     processor = VideoProcessor(event)
     return processor.process()
 
-mockInput = {
-    "videoConfig": {
-        "trackOrder": [
-            "initial",
-            "template",
-            "card",
-            "template",
-            "card",
-            "template",
-            "card",
-            "template",
-            "card",
-            "template",
-            "final"
-        ],
-        "uploadedResources": {
-            "bucketKey": "retrospet-photos-users/users_photos/79e53146-022b-4a92-8fe3-6d8e69f059b2",
-            "folderId": "79e53146-022b-4a92-8fe3-6d8e69f059b2"
-        },
-        "textOptions": {
-            "firstLine": "Diogo & Diogo"
-        },
-        "audio": "audio/audio5.mp3"
-    },
-    "static": {
-        "initial": {
-            "refId": "initial",
-            "quantity": 2,
-            "clips": [
-                {
-                    "link": "static/initial/capa.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "initial"
-                    }
-                },
-                {
-                    "link": "static/initial/nome_pet_e_dono.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "initial"
-                    }
-                }
-            ],
-            "ordened": 1
-        },
-        "cards": {
-            "refId": "card",
-            "quantity": 5,
-            "clips": [
-                {
-                    "link": "static/cartelas/variacao3/STEP04.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "card"
-                    }
-                },
-                {
-                    "link": "static/cartelas/variacao3/STEP05.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "card"
-                    }
-                },
-                {
-                    "link": "static/cartelas/variacao3/STEP06.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "card"
-                    }
-                },
-                {
-                    "link": "static/cartelas/variacao3/STEP03.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "card"
-                    }
-                },
-                {
-                    "link": "static/cartelas/variacao3/STEP07.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "card"
-                    }
-                }
-            ],
-            "ordened": 0
-        },
-        "templates": {
-            "refId": "template",
-            "quantity": 5,
-            "clips": [
-                {
-                    "link": "static/templates/FundoFotoVerdeClaro-03.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "template",
-                        "rotation": {
-                            "width": 900,
-                            "height": 720,
-                            "rotation": 3,
-                            "x": 96,
-                            "y": 557
-                        },
-                        "initialTimestamp": 6
-                    }
-                },
-                {
-                    "link": "static/templates/FundoFotoVerdeClaro-05.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "template",
-                        "rotation": {
-                            "width": 868,
-                            "height": 1108,
-                            "rotation": -3.6,
-                            "x": 111,
-                            "y": 325
-                        },
-                        "initialTimestamp": 15
-                    }
-                },
-                {
-                    "link": "static/templates/FundoFotoVerdeMedio-02.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "template",
-                        "rotation": {
-                            "width": 814,
-                            "height": 1074,
-                            "rotation": 2.2,
-                            "x": 121,
-                            "y": 367
-                        },
-                        "initialTimestamp": 24
-                    }
-                },
-                {
-                    "link": "static/templates/FundoFotoVerdeClaro-04.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "template",
-                        "rotation": {
-                            "width": 900,
-                            "height": 900,
-                            "rotation": 1.5,
-                            "x": 90,
-                            "y": 426
-                        },
-                        "initialTimestamp": 30
-                    }
-                },
-                {
-                    "link": "static/templates/FundoFotoVerdeMedio-05.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "template",
-                        "rotation": {
-                            "width": 868,
-                            "height": 1108,
-                            "rotation": -3.6,
-                            "x": 111,
-                            "y": 325
-                        },
-                        "initialTimestamp": 39
-                    }
-                }
-            ],
-            "ordened": 0
-        },
-        "final": {
-            "refId": "final",
-            "quantity": 3,
-            "clips": [
-                {
-                    "link": "static/final/final_step_1.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "final"
-                    }
-                },
-                {
-                    "link": "static/final/final_step_2.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "final"
-                    }
-                },
-                {
-                    "link": "static/final/final_step_3.mp4",
-                    "type": "video",
-                    "metadata": {
-                        "pets": [
-                            {
-                                "name": "Diogo",
-                                "type": "GATO"
-                            }
-                        ],
-                        "clipType": "final"
-                    }
-                }
-            ],
-            "ordened": 1
-        }
-    }
-}
-
-if __name__ == "__main__":
-    lambda_handler(mockInput, None)
+# if __name__ == "__main__":
+#     lambda_handler(mockInput, None)
