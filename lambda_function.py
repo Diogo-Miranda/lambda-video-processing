@@ -20,8 +20,8 @@ ENVIRONMENT = 'production'  # production | local
 BUCKET_NAME = 'photos-processing'
 OUTPUT_BUCKET_NAME = 'retrospet-photos-users'
 
-MAX_WORKERS_PROCESS_CLIPS = 10
-MAX_WORKERS_PROCESS_IMAGES = 10
+MAX_WORKERS_PROCESS_CLIPS = 15
+MAX_WORKERS_PROCESS_IMAGES = 30
 
 class VideoProcessor:
     def __init__(self, event: Dict[str, Any]):
@@ -665,7 +665,41 @@ class VideoProcessor:
         return final_output
 
     def cleanup(self):
-        print("Cleaning up temporary files...")
+        print("Starting cleanup process...")
+        try:
+            # Remove all temporary files first
+            for temp_file in self.temp_files:
+                if os.path.exists(temp_file):
+                    try:
+                        os.remove(temp_file)
+                        print(f"Removed temporary file: {temp_file}")
+                    except Exception as e:
+                        print(f"Error removing file {temp_file}: {str(e)}")
+
+            # Remove all subdirectories
+            for directory in [self.images_dir, self.videos_dir, self.temp_files_dir]:
+                if os.path.exists(directory):
+                    try:
+                        for root, dirs, files in os.walk(directory, topdown=False):
+                            for name in files:
+                                os.remove(os.path.join(root, name))
+                            for name in dirs:
+                                os.rmdir(os.path.join(root, name))
+                        os.rmdir(directory)
+                        print(f"Removed directory: {directory}")
+                    except Exception as e:
+                        print(f"Error removing directory {directory}: {str(e)}")
+
+            # Finally remove the main temp directory
+            if os.path.exists(self.temp_dir):
+                try:
+                    os.rmdir(self.temp_dir)
+                    print(f"Removed main temporary directory: {self.temp_dir}")
+                except Exception as e:
+                    print(f"Error removing main directory {self.temp_dir}: {str(e)}")
+
+        except Exception as e:
+            print(f"Error during cleanup: {str(e)}")
 
     def process(self) -> Dict[str, Any]:
         try:
@@ -699,6 +733,7 @@ class VideoProcessor:
             }
         finally:
             self.cleanup()
+            print("Cleanup completed")
 
 def lambda_handler(event, context):
     processor = VideoProcessor(event)
