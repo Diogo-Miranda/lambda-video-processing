@@ -12,6 +12,7 @@ from PIL import Image
 import uuid
 import math
 from PIL import ImageFilter, ImageOps
+import traceback
 
 FFMPEG_LAYER_PATH = '/opt/bin/ffmpeg'
 FFMPEG_LAYER_PATH_WITH_DRAW_TEXT = '/opt/bin/ffmpeg2'
@@ -134,7 +135,12 @@ class VideoProcessor:
         Includes a safety margin to prevent edge cropping during rotation.
         """
         # First handle EXIF orientation
-        img = ImageOps.exif_transpose(img)
+        try:
+            img = ImageOps.exif_transpose(img)
+        except Exception as e:
+            print(f"Warning: Could not process EXIF data: {str(e)}")
+            # Continue com a imagem original se houver erro no EXIF
+            pass
         
         # Get target dimensions from rotation config
         target_width = rotation_config['width']
@@ -213,10 +219,18 @@ class VideoProcessor:
         self, template_clip: Dict, image_paths: List[str], temp_dir: str
     ) -> str:
         try:
+            print(f"Starting process_template_with_images with {len(image_paths)} images")
+            
+            # Verificar se há imagens para processar
+            if not image_paths:
+                print("ERROR: No images provided for processing")
+                raise ValueError("No images provided for processing")
+
             # Save template in videos directory
             template_path = os.path.join(
                 self.videos_dir, f"template_{os.path.basename(template_clip['link'])}"
             )
+            print(f"Downloading template to: {template_path}")
             self.s3_client.download_file(
                 BUCKET_NAME, template_clip["link"], template_path
             )
@@ -225,50 +239,62 @@ class VideoProcessor:
             # Create directory for processed images
             processed_images_dir = os.path.join(self.temp_files_dir, f'processed_images_{uuid.uuid4()}')
             os.makedirs(processed_images_dir, exist_ok=True)
+            print(f"Created processed images directory: {processed_images_dir}")
             
             rotation_config = template_clip["metadata"]["rotation"]
             processed_image_paths = []
             
-            # Define background color (hex #e9e7e9)
-            bg_color = (233, 231, 233, 255)  # RGB + Alpha values for #e9e7e9
-
+            print(f"Processing {len(image_paths)} images with rotation config: {rotation_config}")
+            
             # Pre-process each image with rotation
             for idx, image_path in enumerate(image_paths):
                 processed_image_path = os.path.join(processed_images_dir, f"processed_image_{idx}.png")
+                print(f"Processing image {idx + 1}/{len(image_paths)}: {image_path}")
                 
                 with Image.open(image_path).convert("RGBA") as img:
-                    final_img = self.preprocess_image(img, rotation_config, bg_color)
-
-                    # Save with maximum quality
-                    final_img.save(
-                        processed_image_path,
-                        format="PNG",
-                        optimize=True,
-                        quality=100
-                    )
+                    final_img = self.preprocess_image(img, rotation_config, (233, 231, 233, 255))
+                    final_img.save(processed_image_path, format="PNG", optimize=True, quality=100)
                     
                     processed_image_paths.append(processed_image_path)
                     self.temp_files.append(processed_image_path)
 
-            # Rest of the video processing using processed images
+            print(f"Successfully processed {len(processed_image_paths)} images")
+
+            if not processed_image_paths:
+                print("ERROR: No images were processed successfully")
+                raise ValueError("No images were processed successfully")
+
+            # Setup output paths
             image_video_output = os.path.join(
                 self.temp_files_dir, 
                 f"image_video_{os.path.splitext(os.path.basename(template_clip['link']))[0]}.mp4"
             )
-            self.temp_files.append(image_video_output)
-
             output_path = os.path.join(
                 self.videos_dir, 
                 f"processed_{os.path.basename(template_clip['link'])}"
             )
-            self.temp_files.append(output_path)
+            self.temp_files.extend([image_video_output, output_path])
 
-            # Calculate duration per image
+            # Calculate duration with detailed logging
             num_images = len(processed_image_paths)
-            total_duration = 6
-            duration_per_image = total_duration // num_images if num_images <= 2 else total_duration / num_images
+            print(f"Calculating duration for {num_images} images")
+            
+            if num_images <= 0:
+                print("ERROR: num_images is zero or negative")
+                raise ValueError("No valid images to process")
+            
+            total_duration = 6.0
+            print(f"Total duration: {total_duration}, num_images: {num_images}")
+            
+            # Calculate duration per image with minimum duration
+            duration_per_image = max(
+                total_duration / float(num_images) if num_images > 2 else total_duration / 2.0,
+                0.5
+            )
+            print(f"Calculated duration per image: {duration_per_image}")
 
             # Create video from processed images
+            print("Building ffmpeg filter complex")
             filter_complex_parts = []
             for idx, _ in enumerate(processed_image_paths):
                 filter_complex_parts.append(f"[{idx}:v]setsar=1[v{idx}]")
@@ -278,11 +304,13 @@ class VideoProcessor:
                 + f";{''.join(f'[v{idx}]' for idx in range(len(processed_image_paths)))}concat=n={len(processed_image_paths)}:v=1:a=0[outv]"
             )
 
+            print("Preparing ffmpeg inputs")
             ffmpeg_inputs = []
             for image_path in processed_image_paths:
                 ffmpeg_inputs.extend(["-loop", "1", "-t", str(duration_per_image), "-i", image_path])
 
             # Create video from processed images
+            print("Executing first ffmpeg command to create video from images")
             ffmpeg_command = [
                 self.ffmpeg_path,
                 *ffmpeg_inputs,
@@ -304,10 +332,14 @@ class VideoProcessor:
                 image_video_output,
             ]
             subprocess.run(ffmpeg_command, check=True)
+            print("First ffmpeg command completed successfully")
 
             # Overlay the generated video on template
+            print("Starting overlay process")
             x_position = rotation_config["x"]
             y_position = rotation_config["y"]
+            print(f"Overlay position: x={x_position}, y={y_position}")
+            
             ffmpeg_process = subprocess.Popen(
                 [
                     self.ffmpeg_path,
@@ -340,10 +372,15 @@ class VideoProcessor:
             stdout, stderr = ffmpeg_process.communicate()
             if ffmpeg_process.returncode != 0:
                 print(f"Error processing video {output_path}: {stderr.decode()}")
-
+                raise Exception(f"FFmpeg overlay process failed: {stderr.decode()}")
+            
+            print(f"Successfully completed video processing: {output_path}")
             return output_path
+            
         except Exception as e:
-            print(f"Error processing template video", e)
+            print(f"ERROR in process_template_with_images: {str(e)}")
+            print(f"Error type: {type(e)}")
+            print(f"Error traceback: {traceback.format_exc()}")
             raise
 
     def setup_ffmpeg(self) -> str:
@@ -732,14 +769,14 @@ class VideoProcessor:
                 'body': f'Error: {str(e)}'
             }
         finally:
-            self.cleanup()
+            # self.cleanup()
             print("Cleanup completed")
 
 def lambda_handler(event, context):
     processor = VideoProcessor(event)
     return processor.process()
 
-# mockInput = {"videoConfig":{"trackOrder":["initial","template","card","template","card","template","card","template","card","template","final"],"uploadedResources":{"bucketKey":"retrospet-photos-users/users_photos/9700896b-fddf-4541-a561-f57677cb99f7","folderId":"9700896b-fddf-4541-a561-f57677cb99f7"},"textOptions":{"firstLine":"giovana & Alice"},"audio":"audio/audio2.mp3"},"static":{"initial":{"refId":"initial","quantity":2,"clips":[{"link":"static/initial/capa.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"initial"}},{"link":"static/initial/nome_pet_e_dono.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"initial"}}],"ordened":1},"cards":{"refId":"card","quantity":5,"clips":[{"link":"static/cartelas/variacao2/STEP03.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"card"}},{"link":"static/cartelas/variacao2/STEP07.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"card"}},{"link":"static/cartelas/variacao2/STEP04.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"card"}},{"link":"static/cartelas/variacao2/STEP08.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"card"}},{"link":"static/cartelas/variacao2/STEP06.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"card"}}],"ordened":0},"templates":{"refId":"template","quantity":5,"clips":[{"link":"static/templates/FundoFotoVerdeMedio-01.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"template","rotation":{"width":930,"height":930,"rotation":1.7,"x":81,"y":439},"initialTimestamp":6}},{"link":"static/templates/FundoFotoVerdeClaro-05.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"template","rotation":{"width":864,"height":1114,"rotation":-3.6,"x":107.8,"y":315},"initialTimestamp":15}},{"link":"static/templates/FundoFotoVerdeClaro-03.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"template","rotation":{"width":890,"height":724,"rotation":3,"x":93,"y":555},"initialTimestamp":24}},{"link":"static/templates/FundoFotoVerdeEscuro-05.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"template","rotation":{"width":864,"height":1114,"rotation":-3.6,"x":107.8,"y":315},"initialTimestamp":30}},{"link":"static/templates/FundoFotoVerdeMedio-02.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"template","rotation":{"width":814,"height":1078,"rotation":2.2,"x":119,"y":365},"initialTimestamp":39}}],"ordened":0},"final":{"refId":"final","quantity":3,"clips":[{"link":"static/final/final_step_1.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"final"}},{"link":"static/final/final_step_2.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"final"}},{"link":"static/final/final_step_3.mp4","type":"video","metadata":{"pets":[{"name":"Alice","type":"CAO"}],"clipType":"final"}}],"ordened":1}}}
+# mockInput = {"videoConfig":{"trackOrder":["initial","template","card","template","card","template","card","template","card","template","final"],"uploadedResources":{"bucketKey":"retrospet-photos-users/users_photos/702e785e-a6ae-4686-9de9-029cc7dbe59c","folderId":"702e785e-a6ae-4686-9de9-029cc7dbe59c"},"textOptions":{"firstLine":"DENIS & Eevee"},"audio":"audio/audio4.mp3"},"static":{"initial":{"refId":"initial","quantity":2,"clips":[{"link":"static/initial/capa.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"initial"}},{"link":"static/initial/nome_pet_e_dono.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"initial"}}],"ordened":1},"cards":{"refId":"card","quantity":5,"clips":[{"link":"static/cartelas/v2/cao/variacao3/STEP05.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"card"}},{"link":"static/cartelas/v2/cao/variacao3/STEP07.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"card"}},{"link":"static/cartelas/v2/cao/variacao3/STEP03.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"card"}},{"link":"static/cartelas/v2/cao/variacao3/STEP02.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"card"}},{"link":"static/cartelas/v2/cao/variacao3/STEP01.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"card"}}],"ordened":0},"templates":{"refId":"template","quantity":5,"clips":[{"link":"static/templates/v2/FundoFotoVerdeMedio-04.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"template","rotation":{"width":900,"height":1300,"rotation":1,"x":90,"y":326},"initialTimestamp":6}},{"link":"static/templates/v2/FundoFotoVerdeClaro-03.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"template","rotation":{"width":990,"height":1424,"rotation":-1.5,"x":50,"y":210},"initialTimestamp":15}},{"link":"static/templates/v2/FundoFotoVerdeMedio-02.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"template","rotation":{"width":914,"height":1170,"rotation":2.2,"x":85,"y":325},"initialTimestamp":24}},{"link":"static/templates/v2/FundoFotoVerdeEscuro-04.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"template","rotation":{"width":900,"height":1300,"rotation":1,"x":90,"y":326},"initialTimestamp":30}},{"link":"static/templates/v2/FundoFotoVerdeMedio-01.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"template","rotation":{"width":920,"height":1330,"rotation":2,"x":81,"y":239},"initialTimestamp":39}}],"ordened":0},"final":{"refId":"final","quantity":3,"clips":[{"link":"static/final/final_step_1.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"final"}},{"link":"static/final/final_step_2.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"final"}},{"link":"static/final/final_step_3.mp4","type":"video","metadata":{"pets":[{"name":"Eevee","type":"CAO"}],"clipType":"final"}}],"ordened":1}}}
 
 # if __name__ == "__main__":
 #     lambda_handler(mockInput, None)
